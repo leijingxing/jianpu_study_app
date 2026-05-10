@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../audio/tone_synth.dart';
+import '../data/app_settings.dart';
 import '../data/key_transpose.dart';
 import '../data/favorites_store.dart';
 import '../data/jianpu_api.dart';
@@ -18,11 +19,13 @@ class DynamicDetailPage extends StatefulWidget {
     required this.api,
     required this.song,
     required this.favorites,
+    required this.settings,
   });
 
   final JianpuApi api;
   final MusicSummary song;
   final FavoritesStore favorites;
+  final AppSettings settings;
 
   @override
   State<DynamicDetailPage> createState() => _DynamicDetailPageState();
@@ -39,7 +42,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   var _loading = true;
   var _zoom = 0.84;
   var _playing = false;
-  var _speed = 0.45;
+  var _speed = 0.28;
   var _soundEnabled = true;
   var _rewriteNotation = false;
   var _volume = 0.68;
@@ -51,6 +54,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   @override
   void initState() {
     super.initState();
+    _soundEnabled = widget.settings.defaultSoundEnabled;
     widget.favorites.addListener(_onFavoriteChanged);
     _load();
   }
@@ -144,14 +148,17 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         : '动态简谱';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: paperColor,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
+        preferredSize: const Size.fromHeight(62),
         child: SafeArea(
           bottom: false,
           child: Container(
-            height: 64,
-            color: brandColor,
+            height: 62,
+            decoration: const BoxDecoration(
+              color: paperTintColor,
+              border: Border(bottom: BorderSide(color: lineColor)),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
@@ -171,7 +178,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: inkColor,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                           height: 1.1,
@@ -182,8 +189,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.82),
+                        style: const TextStyle(
+                          color: mutedTextColor,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           height: 1.1,
@@ -191,13 +198,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       ),
                     ],
                   ),
-                ),
-                _ToolbarButton(
-                  tooltip: _playing ? '暂停' : '播放',
-                  icon: _playing
-                      ? Icons.pause_circle_filled_rounded
-                      : Icons.play_circle_fill_rounded,
-                  onPressed: _togglePlay,
                 ),
                 _ToolbarButton(
                   tooltip: favorite ? '取消收藏' : '收藏',
@@ -213,14 +213,10 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                   onPressed: detail == null
                       ? null
                       : () => _openSettings(detail, favorite),
-                  icon: const Icon(
-                    Icons.tune_rounded,
-                    color: Colors.white,
-                    size: 25,
-                  ),
+                  icon: const Icon(Icons.tune_rounded, size: 25),
                   style: IconButton.styleFrom(
                     fixedSize: const Size(40, 40),
-                    foregroundColor: Colors.white,
+                    foregroundColor: brandDarkColor,
                   ),
                 ),
               ],
@@ -232,9 +228,13 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
         playing: _playing,
         soundEnabled: _soundEnabled,
         speed: _speed,
+        selectedKey: _selectedKey,
         onPlay: _togglePlay,
         onSoundToggle: () => setState(() => _soundEnabled = !_soundEnabled),
         onSpeedChanged: (value) => setState(() => _speed = value),
+        onSettings: detail == null
+            ? null
+            : () => _openSettings(detail, favorite),
       ),
       body: _buildDetailBody(),
     );
@@ -259,20 +259,39 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       controller: _scrollController,
       child: SingleChildScrollView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 26),
         child: InteractiveViewer(
           minScale: 0.78,
           maxScale: 2,
           boundaryMargin: const EdgeInsets.all(80),
           child: Align(
             alignment: Alignment.topCenter,
-            child: JianpuScoreView(
-              document: _document!,
-              detail: _detail!,
-              zoom: _zoom,
-              activeNoteIndex: _activeNoteIndex,
-              selectedKey: _selectedKey,
-              rewriteNotation: _rewriteNotation,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: paperTintColor,
+                border: Border.all(color: lineColor),
+                borderRadius: BorderRadius.circular(radiusMedium),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: TweenAnimationBuilder<double>(
+                  key: ValueKey(_activeNoteIndex),
+                  tween: Tween(begin: 0.35, end: 1),
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, pulse, _) {
+                    return JianpuScoreView(
+                      document: _document!,
+                      detail: _detail!,
+                      zoom: _zoom,
+                      activeNoteIndex: _activeNoteIndex,
+                      activePulse: pulse,
+                      selectedKey: _selectedKey,
+                      rewriteNotation: _rewriteNotation,
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -395,7 +414,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                     ),
                     const SizedBox(height: 8),
                     _SettingsSection(
-                      title: '显示',
+                      title: '谱面',
                       icon: Icons.visibility_outlined,
                       children: [
                         _SettingSlider(
@@ -416,24 +435,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       title: '播放',
                       icon: Icons.play_circle_outline_rounded,
                       children: [
-                        _KeySelector(
-                          selectedKey: _selectedKey,
-                          onSelected: (key) {
-                            setState(() => _selectedKey = key);
-                            setSheetState(() {});
-                          },
-                        ),
-                        SwitchListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          value: _rewriteNotation,
-                          title: const Text('固定调显示'),
-                          subtitle: const Text('打开后数字会随调门重新换算'),
-                          onChanged: (value) {
-                            setState(() => _rewriteNotation = value);
-                            setSheetState(() {});
-                          },
-                        ),
                         _SettingSlider(
                           label: '滚动速度',
                           value: _speed,
@@ -466,6 +467,31 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                           divisions: 10,
                           onChanged: (value) {
                             setState(() => _volume = value);
+                            setSheetState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SettingsSection(
+                      title: '调式',
+                      icon: Icons.piano_outlined,
+                      children: [
+                        _KeySelector(
+                          selectedKey: _selectedKey,
+                          onSelected: (key) {
+                            setState(() => _selectedKey = key);
+                            setSheetState(() {});
+                          },
+                        ),
+                        SwitchListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          value: _rewriteNotation,
+                          title: const Text('固定调显示'),
+                          subtitle: const Text('打开后数字会随调门重新换算'),
+                          onChanged: (value) {
+                            setState(() => _rewriteNotation = value);
                             setSheetState(() {});
                           },
                         ),
@@ -530,36 +556,53 @@ class _ReaderControls extends StatelessWidget {
     required this.playing,
     required this.soundEnabled,
     required this.speed,
+    required this.selectedKey,
     required this.onPlay,
     required this.onSoundToggle,
     required this.onSpeedChanged,
+    required this.onSettings,
   });
 
   final bool playing;
   final bool soundEnabled;
   final double speed;
+  final String selectedKey;
   final VoidCallback onPlay;
   final VoidCallback onSoundToggle;
   final ValueChanged<double> onSpeedChanged;
+  final VoidCallback? onSettings;
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
       child: Container(
-        height: 58,
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+        height: 66,
+        padding: const EdgeInsets.fromLTRB(12, 7, 12, 9),
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: paperTintColor,
           border: Border(top: BorderSide(color: lineColor)),
         ),
         child: Row(
           children: [
-            IconButton.filled(
-              tooltip: playing ? '暂停' : '播放',
-              onPressed: onPlay,
-              icon: Icon(
-                playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                color: playing ? accentColor : brandColor,
+                borderRadius: BorderRadius.circular(radiusMedium),
+              ),
+              child: IconButton(
+                tooltip: playing ? '暂停' : '播放',
+                onPressed: onPlay,
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 160),
+                  child: Icon(
+                    playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    key: ValueKey(playing),
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
             IconButton(
@@ -573,6 +616,24 @@ class _ReaderControls extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
+            Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: softGreenColor,
+                borderRadius: BorderRadius.circular(radiusMedium),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                selectedKey.isEmpty ? '1=-' : '1=$selectedKey',
+                style: const TextStyle(
+                  color: brandDarkColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
             const Icon(Icons.speed_rounded, size: 18, color: mutedTextColor),
             Expanded(
               child: Slider(
@@ -583,6 +644,11 @@ class _ReaderControls extends StatelessWidget {
                 label: speed.toStringAsFixed(1),
                 onChanged: onSpeedChanged,
               ),
+            ),
+            IconButton(
+              tooltip: '设置',
+              onPressed: onSettings,
+              icon: const Icon(Icons.tune_rounded, color: brandDarkColor),
             ),
           ],
         ),
@@ -607,10 +673,10 @@ class _ToolbarButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white, size: 27),
+      icon: Icon(icon, color: brandDarkColor, size: 27),
       style: IconButton.styleFrom(
         fixedSize: const Size(40, 40),
-        foregroundColor: Colors.white,
+        foregroundColor: brandDarkColor,
       ),
     );
   }
@@ -633,9 +699,9 @@ class _SettingsSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FBFA),
+        color: paperTintColor,
         border: Border.all(color: lineColor),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

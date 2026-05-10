@@ -13,6 +13,7 @@ class JianpuScoreView extends StatelessWidget {
     required this.detail,
     required this.zoom,
     this.activeNoteIndex = -1,
+    this.activePulse = 1,
     this.selectedKey,
     this.rewriteNotation = false,
   });
@@ -21,6 +22,7 @@ class JianpuScoreView extends StatelessWidget {
   final MusicDetail detail;
   final double zoom;
   final int activeNoteIndex;
+  final double activePulse;
   final String? selectedKey;
   final bool rewriteNotation;
 
@@ -43,6 +45,7 @@ class JianpuScoreView extends StatelessWidget {
         layout: layout,
         zoom: zoom,
         activeNoteIndex: activeNoteIndex,
+        activePulse: activePulse,
         selectedKey: displayKey,
       ),
     );
@@ -189,6 +192,7 @@ class _JianpuPainter extends CustomPainter {
     required this.layout,
     required this.zoom,
     required this.activeNoteIndex,
+    required this.activePulse,
     required this.selectedKey,
   });
 
@@ -197,6 +201,7 @@ class _JianpuPainter extends CustomPainter {
   final _ScoreLayout layout;
   final double zoom;
   final int activeNoteIndex;
+  final double activePulse;
   final String selectedKey;
 
   @override
@@ -377,14 +382,14 @@ class _JianpuPainter extends CustomPainter {
   ) {
     if (active) {
       final highlight = Paint()
-        ..color = accentColor.withValues(alpha: 0.18)
+        ..color = accentColor.withValues(alpha: 0.08 + 0.14 * activePulse)
         ..style = PaintingStyle.fill;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromCenter(
             center: Offset(offset.dx, offset.dy + 18),
-            width: 28,
-            height: 38,
+            width: 24 + 4 * activePulse,
+            height: 34 + 4 * activePulse,
           ),
           const Radius.circular(8),
         ),
@@ -519,6 +524,7 @@ class _JianpuPainter extends CustomPainter {
         oldDelegate.detail != detail ||
         oldDelegate.zoom != zoom ||
         oldDelegate.activeNoteIndex != activeNoteIndex ||
+        oldDelegate.activePulse != activePulse ||
         oldDelegate.selectedKey != selectedKey;
   }
 }

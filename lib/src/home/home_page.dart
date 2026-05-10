@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../data/app_settings.dart';
 import '../data/favorites_store.dart';
 import '../data/jianpu_api.dart';
 import '../data/models.dart';
 import '../details/dynamic_detail_page.dart';
 import '../details/image_detail_page.dart';
+import '../settings/settings_page.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, required this.settings});
+
+  final AppSettings settings;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -123,7 +127,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _favorites,
+      animation: Listenable.merge([_favorites, widget.settings]),
       builder: (context, _) {
         return Scaffold(
           body: SafeArea(
@@ -144,6 +148,7 @@ class _HomePageState extends State<HomePage> {
                     _query = value;
                     _load();
                   },
+                  onSettings: _openSettings,
                 ),
                 Expanded(child: _buildBody()),
               ],
@@ -182,7 +187,12 @@ class _HomePageState extends State<HomePage> {
       onRefresh: _load,
       child: ListView.separated(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          widget.settings.compactList ? 6 : 10,
+          16,
+          24,
+        ),
         itemCount: _dynamicSongs.length + 1,
         separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
@@ -197,10 +207,12 @@ class _HomePageState extends State<HomePage> {
           return ScoreCard(
             title: song.title,
             subtitle: song.subtitle,
-            metric: '${song.times} 次练习',
-            badge: 'Lv.${song.level}',
+            metric: '练习 ${song.times}',
+            badge: song.level > 0 ? '难度 ${song.level}' : '动态谱',
             favorite: favorite,
             leadingIcon: Icons.graphic_eq_rounded,
+            compact: widget.settings.compactList,
+            reduceMotion: widget.settings.reduceMotion,
             onFavorite: () => _favorites.toggle(
               FavoriteItem(
                 kind: ScoreKind.dynamic,
@@ -215,6 +227,7 @@ class _HomePageState extends State<HomePage> {
                   api: _api,
                   song: song,
                   favorites: _favorites,
+                  settings: widget.settings,
                 ),
               ),
             ),
@@ -229,7 +242,12 @@ class _HomePageState extends State<HomePage> {
       onRefresh: _load,
       child: ListView.separated(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          widget.settings.compactList ? 6 : 10,
+          16,
+          24,
+        ),
         itemCount: _imageScores.length + 1,
         separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
@@ -251,6 +269,8 @@ class _HomePageState extends State<HomePage> {
             leadingIcon: item.hasVideo
                 ? Icons.play_circle_outline
                 : Icons.image_outlined,
+            compact: widget.settings.compactList,
+            reduceMotion: widget.settings.reduceMotion,
             onFavorite: () => _favorites.toggle(
               FavoriteItem(
                 kind: ScoreKind.image,
@@ -273,11 +293,16 @@ class _HomePageState extends State<HomePage> {
       return const StateView(
         icon: Icons.bookmark_add_outlined,
         title: '还没有收藏',
-        message: '喜欢的动态谱和图片谱都会放在这里。',
+        message: '收藏的谱子会放在这里',
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        widget.settings.compactList ? 6 : 10,
+        16,
+        24,
+      ),
       itemCount: items.length,
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
@@ -285,15 +310,17 @@ class _HomePageState extends State<HomePage> {
         return ScoreCard(
           title: item.title,
           subtitle: item.subtitle.isEmpty
-              ? (item.kind == ScoreKind.dynamic ? '动态简谱' : '图片简谱')
+              ? (item.kind == ScoreKind.dynamic ? '动态谱' : '图片谱')
               : item.subtitle,
-          metric: item.kind == ScoreKind.dynamic ? '动态简谱' : '图片简谱',
-          badge: '已收藏',
+          metric: item.kind == ScoreKind.dynamic ? '动态谱' : '图片谱',
+          badge: '收藏',
           favorite: true,
           imageUrl: item.imageUrl,
           leadingIcon: item.kind == ScoreKind.dynamic
               ? Icons.graphic_eq_rounded
               : Icons.image_outlined,
+          compact: widget.settings.compactList,
+          reduceMotion: widget.settings.reduceMotion,
           onFavorite: () => _favorites.toggle(item),
           onTap: () {
             if (item.kind == ScoreKind.dynamic) {
@@ -310,6 +337,7 @@ class _HomePageState extends State<HomePage> {
                       level: 0,
                     ),
                     favorites: _favorites,
+                    settings: widget.settings,
                   ),
                 ),
               );
@@ -325,8 +353,20 @@ class _HomePageState extends State<HomePage> {
   void _openImageDetail(ImageScoreItem item) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            ImageDetailPage(api: _api, item: item, favorites: _favorites),
+        builder: (_) => ImageDetailPage(
+          api: _api,
+          item: item,
+          favorites: _favorites,
+          settings: widget.settings,
+        ),
+      ),
+    );
+  }
+
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SettingsPage(settings: widget.settings),
       ),
     );
   }
@@ -338,43 +378,57 @@ class _HomeHeader extends StatelessWidget {
     required this.tab,
     required this.onTabChanged,
     required this.onSearch,
+    required this.onSettings,
   });
 
   final TextEditingController controller;
   final int tab;
   final ValueChanged<int> onTabChanged;
   final ValueChanged<String> onSearch;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: paperColor,
-        border: Border(bottom: BorderSide(color: lineColor)),
+      decoration: BoxDecoration(
+        color: palette.paperTint,
+        border: const Border(bottom: BorderSide(color: lineColor)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: palette.soft,
+                    border: Border.all(color: lineColor),
+                    borderRadius: BorderRadius.circular(radiusMedium),
+                  ),
+                  child: Icon(Icons.music_note_rounded, color: palette.brand),
+                ),
+                const SizedBox(width: 10),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '简谱学习',
+                        '轻谱',
                         style: TextStyle(
                           color: inkColor,
-                          fontSize: 24,
+                          fontSize: 26,
                           fontWeight: FontWeight.w900,
-                          height: 1.05,
+                          height: 1.0,
                         ),
                       ),
                       SizedBox(height: 5),
                       Text(
-                        '动态谱 · 图片谱 · 本地收藏',
+                        '听着节拍，读懂简谱',
                         style: TextStyle(
                           color: mutedTextColor,
                           fontSize: 13,
@@ -384,16 +438,18 @@ class _HomeHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: inkColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.music_note_rounded,
-                    color: Colors.white,
+                IconButton(
+                  tooltip: '设置',
+                  onPressed: onSettings,
+                  icon: const Icon(Icons.settings_outlined),
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(42, 42),
+                    foregroundColor: palette.brandDark,
+                    backgroundColor: palette.soft,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(radiusMedium),
+                      side: const BorderSide(color: lineColor),
+                    ),
                   ),
                 ),
               ],
@@ -435,6 +491,17 @@ class _HomeHeader extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: tab == 1 ? '搜索图片谱标题' : '搜索歌名、歌手、编配',
                     prefixIcon: const Icon(Icons.search_rounded),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(radiusMedium),
+                      borderSide: const BorderSide(
+                        color: lineColor,
+                        width: 1.4,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(radiusMedium),
+                      borderSide: BorderSide(color: palette.brand, width: 1.6),
+                    ),
                     suffixIcon: value.text.isEmpty
                         ? null
                         : IconButton(
@@ -467,6 +534,8 @@ class ScoreCard extends StatelessWidget {
     required this.leadingIcon,
     required this.onTap,
     required this.onFavorite,
+    this.compact = false,
+    this.reduceMotion = false,
     this.imageUrl = '',
   });
 
@@ -479,67 +548,104 @@ class ScoreCard extends StatelessWidget {
   final String imageUrl;
   final VoidCallback onTap;
   final VoidCallback onFavorite;
+  final bool compact;
+  final bool reduceMotion;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              _CoverThumb(title: title, imageUrl: imageUrl, icon: leadingIcon),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color: inkColor,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: mutedTextColor,
-                        fontSize: 13,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        InfoPill(label: badge, color: brandColor),
-                        InfoPill(label: metric, color: const Color(0xFF766C60)),
-                      ],
-                    ),
-                  ],
+    final palette = paletteOf(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 10),
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(radiusMedium),
+          child: Padding(
+            padding: EdgeInsets.all(compact ? 10 : 12),
+            child: Row(
+              children: [
+                _CoverThumb(
+                  title: title,
+                  imageUrl: imageUrl,
+                  icon: leadingIcon,
+                  compact: compact,
                 ),
-              ),
-              IconButton(
-                tooltip: favorite ? '取消收藏' : '收藏',
-                onPressed: onFavorite,
-                icon: Icon(
-                  favorite
-                      ? Icons.bookmark_rounded
-                      : Icons.bookmark_border_rounded,
-                  color: favorite ? accentColor : const Color(0xFF8B969C),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          color: inkColor,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: mutedTextColor,
+                          fontSize: 13,
+                          height: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          InfoPill(label: badge, color: palette.brand),
+                          InfoPill(
+                            label: metric,
+                            color: const Color(0xFF7C6C58),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                IconButton(
+                  tooltip: favorite ? '取消收藏' : '收藏',
+                  onPressed: onFavorite,
+                  icon: AnimatedSwitcher(
+                    duration: reduceMotion
+                        ? Duration.zero
+                        : const Duration(milliseconds: 180),
+                    transitionBuilder: (child, animation) => ScaleTransition(
+                      scale: animation,
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                    child: Icon(
+                      favorite
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
+                      key: ValueKey(favorite),
+                      color: favorite ? accentColor : const Color(0xFF8B969C),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -551,50 +657,62 @@ class _CoverThumb extends StatelessWidget {
   const _CoverThumb({
     required this.title,
     required this.icon,
+    required this.compact,
     this.imageUrl = '',
   });
 
   final String title;
   final IconData icon;
+  final bool compact;
   final String imageUrl;
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(radiusMedium),
       child: Container(
-        width: 62,
-        height: 72,
-        color: const Color(0xFFE9F0EC),
+        width: compact ? 54 : 62,
+        height: compact ? 62 : 72,
+        color: paletteOf(context).soft,
         child: imageUrl.isNotEmpty
             ? Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _fallback(),
+                errorBuilder: (_, _, _) => _fallback(context),
               )
-            : _fallback(),
+            : _fallback(context),
       ),
     );
   }
 
-  Widget _fallback() {
+  Widget _fallback(BuildContext context) {
     final letter = title.characters.isEmpty ? '谱' : title.characters.first;
+    final palette = paletteOf(context);
     return Stack(
       fit: StackFit.expand,
       children: [
-        Container(color: brandColor.withValues(alpha: 0.16)),
+        Container(color: palette.soft),
+        Positioned(
+          right: -8,
+          bottom: -10,
+          child: Icon(
+            Icons.graphic_eq_rounded,
+            size: 42,
+            color: palette.brand.withValues(alpha: 0.12),
+          ),
+        ),
         Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: brandColor),
+              Icon(icon, size: 18, color: palette.brand),
               const SizedBox(height: 4),
               Text(
                 letter,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
-                  color: brandColor,
+                  color: palette.brand,
                 ),
               ),
             ],

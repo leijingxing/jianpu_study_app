@@ -6,7 +6,7 @@ void main() {
     await tester.pumpWidget(const JianpuStudyApp());
     await tester.pump();
 
-    expect(find.text('简谱学习'), findsOneWidget);
+    expect(find.text('轻谱'), findsOneWidget);
     expect(find.text('动态谱'), findsOneWidget);
     expect(find.text('图片谱'), findsOneWidget);
     expect(find.text('收藏'), findsOneWidget);

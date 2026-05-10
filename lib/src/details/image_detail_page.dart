@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../data/app_settings.dart';
 import '../data/favorites_store.dart';
 import '../data/jianpu_api.dart';
 import '../data/models.dart';
@@ -13,11 +14,13 @@ class ImageDetailPage extends StatefulWidget {
     required this.api,
     required this.item,
     required this.favorites,
+    required this.settings,
   });
 
   final JianpuApi api;
   final ImageScoreItem item;
   final FavoritesStore favorites;
+  final AppSettings settings;
 
   @override
   State<ImageDetailPage> createState() => _ImageDetailPageState();
@@ -61,7 +64,9 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
   Widget build(BuildContext context) {
     final favorite = widget.favorites.contains(ScoreKind.image, widget.item.id);
     return Scaffold(
+      backgroundColor: paperColor,
       appBar: AppBar(
+        backgroundColor: paperTintColor,
         title: Text(
           widget.item.title,
           maxLines: 1,
@@ -106,14 +111,15 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
 
     final detail = _detail!;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
       children: [
         Text(
           widget.item.title,
           style: const TextStyle(
-            fontSize: 24,
+            fontSize: 22,
             fontWeight: FontWeight.w900,
             color: inkColor,
+            height: 1.08,
           ),
         ),
         const SizedBox(height: 8),
@@ -150,7 +156,10 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
           )
         else ...[
           for (final url in detail.videoUrls) ...[
-            _ScoreVideo(url: url),
+            _ScoreVideo(
+              url: url,
+              mutedByDefault: widget.settings.videoMutedByDefault,
+            ),
             const SizedBox(height: 14),
           ],
           for (final url in detail.imageUrls) ...[
@@ -164,9 +173,10 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
 }
 
 class _ScoreVideo extends StatefulWidget {
-  const _ScoreVideo({required this.url});
+  const _ScoreVideo({required this.url, required this.mutedByDefault});
 
   final String url;
+  final bool mutedByDefault;
 
   @override
   State<_ScoreVideo> createState() => _ScoreVideoState();
@@ -175,12 +185,14 @@ class _ScoreVideo extends StatefulWidget {
 class _ScoreVideoState extends State<_ScoreVideo> {
   late final VideoPlayerController _controller;
   late final Future<void> _initialize;
+  late var _muted = widget.mutedByDefault;
 
   @override
   void initState() {
     super.initState();
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
     _initialize = _controller.initialize().then((_) {
+      _controller.setVolume(_muted ? 0 : 1);
       if (mounted) setState(() {});
     });
     _controller.addListener(_onControllerChanged);
@@ -206,15 +218,31 @@ class _ScoreVideoState extends State<_ScoreVideo> {
     }
   }
 
+  void _toggleMute() {
+    if (!_controller.value.isInitialized) return;
+    setState(() => _muted = !_muted);
+    _controller.setVolume(_muted ? 0 : 1);
+  }
+
+  Future<void> _seekBy(Duration offset) async {
+    if (!_controller.value.isInitialized) return;
+    final duration = _controller.value.duration;
+    final next = _controller.value.position + offset;
+    final clamped = Duration(
+      milliseconds: next.inMilliseconds.clamp(0, duration.inMilliseconds),
+    );
+    await _controller.seekTo(clamped);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(radiusMedium),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.black,
           border: Border.all(color: lineColor),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: FutureBuilder<void>(
           future: _initialize,
@@ -249,13 +277,15 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                         aspectRatio: _controller.value.aspectRatio,
                         child: VideoPlayer(_controller),
                       ),
-                      if (!_controller.value.isPlaying)
-                        Container(
+                      AnimatedOpacity(
+                        opacity: _controller.value.isPlaying ? 0 : 1,
+                        duration: const Duration(milliseconds: 160),
+                        child: Container(
                           width: 54,
                           height: 54,
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.52),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(radiusMedium),
                           ),
                           child: const Icon(
                             Icons.play_arrow_rounded,
@@ -263,6 +293,7 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                             size: 36,
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -276,6 +307,16 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                     backgroundColor: Color(0x33FFFFFF),
                   ),
                 ),
+                _VideoControls(
+                  playing: _controller.value.isPlaying,
+                  muted: _muted,
+                  position: _controller.value.position,
+                  duration: _controller.value.duration,
+                  onPlay: _togglePlay,
+                  onMute: _toggleMute,
+                  onRewind: () => _seekBy(const Duration(seconds: -10)),
+                  onForward: () => _seekBy(const Duration(seconds: 10)),
+                ),
               ],
             );
           },
@@ -283,6 +324,87 @@ class _ScoreVideoState extends State<_ScoreVideo> {
       ),
     );
   }
+}
+
+class _VideoControls extends StatelessWidget {
+  const _VideoControls({
+    required this.playing,
+    required this.muted,
+    required this.position,
+    required this.duration,
+    required this.onPlay,
+    required this.onMute,
+    required this.onRewind,
+    required this.onForward,
+  });
+
+  final bool playing;
+  final bool muted;
+  final Duration position;
+  final Duration duration;
+  final VoidCallback onPlay;
+  final VoidCallback onMute;
+  final VoidCallback onRewind;
+  final VoidCallback onForward;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 46,
+      color: const Color(0xFF111111),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: playing ? '暂停' : '播放',
+            onPressed: onPlay,
+            icon: Icon(
+              playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              color: Colors.white,
+            ),
+          ),
+          IconButton(
+            tooltip: '后退 10 秒',
+            onPressed: onRewind,
+            icon: const Icon(Icons.replay_10_rounded, color: Colors.white70),
+          ),
+          IconButton(
+            tooltip: '前进 10 秒',
+            onPressed: onForward,
+            icon: const Icon(Icons.forward_10_rounded, color: Colors.white70),
+          ),
+          Expanded(
+            child: Text(
+              '${_formatDuration(position)} / ${_formatDuration(duration)}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: muted ? '打开声音' : '静音',
+            onPressed: onMute,
+            icon: Icon(
+              muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatDuration(Duration value) {
+  final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
+  if (value.inHours > 0) {
+    return '${value.inHours}:$minutes:$seconds';
+  }
+  return '$minutes:$seconds';
 }
 
 class _ScoreImage extends StatelessWidget {
@@ -293,12 +415,12 @@ class _ScoreImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(radiusMedium),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: paperTintColor,
           border: Border.all(color: lineColor),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: InteractiveViewer(
           minScale: 0.8,

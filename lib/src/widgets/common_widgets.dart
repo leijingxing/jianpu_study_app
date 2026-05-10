@@ -24,7 +24,16 @@ class StateView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 54, color: brandColor),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: softGreenColor,
+                borderRadius: BorderRadius.circular(radiusMedium),
+                border: Border.all(color: lineColor),
+              ),
+              child: Icon(icon, size: 34, color: brandColor),
+            ),
             const SizedBox(height: 14),
             Text(
               title,
@@ -62,7 +71,7 @@ class InfoPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(99),
+        borderRadius: BorderRadius.circular(radiusSmall),
       ),
       child: Text(
         label,
@@ -94,7 +103,7 @@ class LoadMoreIndicator extends StatelessWidget {
         child: loading
             ? const CircularProgressIndicator()
             : Text(
-                hasMore ? '继续向下滑动加载更多' : '已经到底了',
+                hasMore ? '继续加载' : '没有更多谱子了',
                 style: const TextStyle(color: mutedTextColor, fontSize: 13),
               ),
       ),
