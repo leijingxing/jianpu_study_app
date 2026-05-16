@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'data/app_settings.dart';
 import 'home/home_page.dart';
+import 'pro/jianpu_practice_page.dart';
+import 'pro/metronome_page.dart';
 import 'theme/app_theme.dart';
 
 class JianpuStudyApp extends StatefulWidget {
@@ -36,6 +38,10 @@ class _JianpuStudyAppState extends State<JianpuStudyApp> {
           debugShowCheckedModeBanner: false,
           theme: buildAppTheme(style: _settings.uiStyle),
           home: HomePage(settings: _settings),
+          routes: {
+            JianpuPracticePage.routeName: (_) => const JianpuPracticePage(),
+            MetronomePage.routeName: (_) => const MetronomePage(),
+          },
         );
       },
     );

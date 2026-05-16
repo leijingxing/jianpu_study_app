@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/app_settings.dart';
+import '../pro/jianpu_practice_page.dart';
+import '../pro/metronome_page.dart';
 import '../theme/app_theme.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -77,6 +79,28 @@ class SettingsPage extends StatelessWidget {
                     title: const Text('图片谱视频默认静音'),
                     subtitle: const Text('视频可在播放器里随时打开声音'),
                     onChanged: settings.setVideoMutedByDefault,
+                  ),
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.menu_book_rounded),
+                    title: const Text('简谱练习'),
+                    subtitle: const Text('符号教学、节奏拆解和逐小节循环'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(JianpuPracticePage.routeName),
+                  ),
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.av_timer_rounded),
+                    title: const Text('专业节拍器'),
+                    subtitle: const Text('Tap Tempo、细分、重音、训练模式和预设'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(MetronomePage.routeName),
                   ),
                 ],
               ),

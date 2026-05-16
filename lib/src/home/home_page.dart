@@ -6,6 +6,8 @@ import '../data/jianpu_api.dart';
 import '../data/models.dart';
 import '../details/dynamic_detail_page.dart';
 import '../details/image_detail_page.dart';
+import '../pro/jianpu_practice_page.dart';
+import '../pro/metronome_page.dart';
 import '../settings/settings_page.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -149,6 +151,11 @@ class _HomePageState extends State<HomePage> {
                     _load();
                   },
                   onSettings: _openSettings,
+                  onPractice: () => Navigator.of(
+                    context,
+                  ).pushNamed(JianpuPracticePage.routeName),
+                  onMetronome: () =>
+                      Navigator.of(context).pushNamed(MetronomePage.routeName),
                 ),
                 Expanded(child: _buildBody()),
               ],
@@ -379,6 +386,8 @@ class _HomeHeader extends StatelessWidget {
     required this.onTabChanged,
     required this.onSearch,
     required this.onSettings,
+    required this.onPractice,
+    required this.onMetronome,
   });
 
   final TextEditingController controller;
@@ -386,31 +395,36 @@ class _HomeHeader extends StatelessWidget {
   final ValueChanged<int> onTabChanged;
   final ValueChanged<String> onSearch;
   final VoidCallback onSettings;
+  final VoidCallback onPractice;
+  final VoidCallback onMetronome;
 
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    return DecoratedBox(
+    return Container(
       decoration: BoxDecoration(
         color: palette.paperTint,
         border: const Border(bottom: BorderSide(color: lineColor)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
-                    color: palette.soft,
-                    border: Border.all(color: lineColor),
+                    color: palette.brand,
                     borderRadius: BorderRadius.circular(radiusMedium),
                   ),
-                  child: Icon(Icons.music_note_rounded, color: palette.brand),
+                  child: const Icon(
+                    Icons.music_note_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 const Expanded(
@@ -421,14 +435,14 @@ class _HomeHeader extends StatelessWidget {
                         '轻谱',
                         style: TextStyle(
                           color: inkColor,
-                          fontSize: 26,
+                          fontSize: 23,
                           fontWeight: FontWeight.w900,
                           height: 1.0,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      SizedBox(height: 4),
                       Text(
-                        '听着节拍，读懂简谱',
+                        '查谱、练节奏、读懂简谱',
                         style: TextStyle(
                           color: mutedTextColor,
                           fontSize: 13,
@@ -443,9 +457,9 @@ class _HomeHeader extends StatelessWidget {
                   onPressed: onSettings,
                   icon: const Icon(Icons.settings_outlined),
                   style: IconButton.styleFrom(
-                    fixedSize: const Size(42, 42),
+                    fixedSize: const Size(38, 38),
                     foregroundColor: palette.brandDark,
-                    backgroundColor: palette.soft,
+                    backgroundColor: palette.paperTint,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(radiusMedium),
                       side: const BorderSide(color: lineColor),
@@ -454,69 +468,293 @@ class _HomeHeader extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(
-                    value: 0,
-                    icon: Icon(Icons.graphic_eq_rounded),
-                    label: Text('动态谱'),
-                  ),
-                  ButtonSegment(
-                    value: 1,
-                    icon: Icon(Icons.image_outlined),
-                    label: Text('图片谱'),
-                  ),
-                  ButtonSegment(
-                    value: 2,
-                    icon: Icon(Icons.bookmark_border_rounded),
-                    label: Text('收藏'),
-                  ),
-                ],
-                selected: {tab},
-                onSelectionChanged: (value) => onTabChanged(value.first),
-                showSelectedIcon: false,
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: controller,
               builder: (context, value, _) {
-                return TextField(
-                  controller: controller,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: onSearch,
-                  decoration: InputDecoration(
-                    hintText: tab == 1 ? '搜索图片谱标题' : '搜索歌名、歌手、编配',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(radiusMedium),
-                      borderSide: const BorderSide(
-                        color: lineColor,
-                        width: 1.4,
+                return SizedBox(
+                  height: 44,
+                  child: TextField(
+                    controller: controller,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: onSearch,
+                    decoration: InputDecoration(
+                      hintText: tab == 1 ? '搜索图片谱标题' : '搜索歌名、歌手、编配',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 21),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 0,
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(radiusMedium),
+                        borderSide: const BorderSide(
+                          color: lineColor,
+                          width: 1.2,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(radiusMedium),
+                        borderSide: BorderSide(
+                          color: palette.brand,
+                          width: 1.5,
+                        ),
+                      ),
+                      suffixIcon: value.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: '清除搜索',
+                              onPressed: () {
+                                controller.clear();
+                                onSearch('');
+                              },
+                              icon: const Icon(Icons.close_rounded, size: 20),
+                            ),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(radiusMedium),
-                      borderSide: BorderSide(color: palette.brand, width: 1.6),
-                    ),
-                    suffixIcon: value.text.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: '清除搜索',
-                            onPressed: () {
-                              controller.clear();
-                              onSearch('');
-                            },
-                            icon: const Icon(Icons.close_rounded),
-                          ),
                   ),
                 );
               },
             ),
+            const SizedBox(height: 10),
+            _HomeToolGrid(onPractice: onPractice, onMetronome: onMetronome),
+            const SizedBox(height: 10),
+            _HomeTabs(tab: tab, onTabChanged: onTabChanged),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeTabs extends StatelessWidget {
+  const _HomeTabs({required this.tab, required this.onTabChanged});
+
+  final int tab;
+  final ValueChanged<int> onTabChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: palette.paper,
+        border: Border.all(color: lineColor),
+        borderRadius: BorderRadius.circular(radiusMedium),
+      ),
+      child: Row(
+        children:
+            const [
+              _HomeTabButton(
+                value: 0,
+                icon: Icons.graphic_eq_rounded,
+                label: '动态谱',
+              ),
+              _HomeTabButton(
+                value: 1,
+                icon: Icons.image_outlined,
+                label: '图片谱',
+              ),
+              _HomeTabButton(
+                value: 2,
+                icon: Icons.bookmark_border_rounded,
+                label: '收藏',
+              ),
+            ].map((button) {
+              return Expanded(
+                child: _HomeTabButton(
+                  value: button.value,
+                  icon: button.icon,
+                  label: button.label,
+                  selected: tab == button.value,
+                  onTap: () => onTabChanged(button.value),
+                ),
+              );
+            }).toList(),
+      ),
+    );
+  }
+}
+
+class _HomeTabButton extends StatelessWidget {
+  const _HomeTabButton({
+    required this.value,
+    required this.icon,
+    required this.label,
+    this.selected = false,
+    this.onTap,
+  });
+
+  final int value;
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(radiusSmall),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          height: 36,
+          decoration: BoxDecoration(
+            color: selected ? palette.brand : Colors.transparent,
+            borderRadius: BorderRadius.circular(radiusSmall),
+          ),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 17,
+                color: selected ? Colors.white : mutedTextColor,
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: selected ? Colors.white : mutedTextColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeToolGrid extends StatelessWidget {
+  const _HomeToolGrid({required this.onPractice, required this.onMetronome});
+
+  final VoidCallback onPractice;
+  final VoidCallback onMetronome;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = constraints.maxWidth < 340;
+        final cards = [
+          _HomeToolCard(
+            icon: Icons.menu_book_rounded,
+            title: '简谱练习',
+            subtitle: '符号教学 · 逐小节',
+            onTap: onPractice,
+          ),
+          _HomeToolCard(
+            icon: Icons.av_timer_rounded,
+            title: '专业节拍器',
+            subtitle: 'Tap Tempo · 训练',
+            onTap: onMetronome,
+          ),
+        ];
+        if (stacked) {
+          return Column(
+            children: [cards[0], const SizedBox(height: 8), cards[1]],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: cards[0]),
+            const SizedBox(width: 10),
+            Expanded(child: cards[1]),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _HomeToolCard extends StatelessWidget {
+  const _HomeToolCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(radiusMedium),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(10, 9, 9, 9),
+          decoration: BoxDecoration(
+            color: palette.soft,
+            border: Border.all(color: lineColor),
+            borderRadius: BorderRadius.circular(radiusMedium),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: palette.paperTint,
+                  borderRadius: BorderRadius.circular(radiusMedium),
+                  border: Border.all(color: lineColor),
+                ),
+                child: Icon(icon, color: palette.brand),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: inkColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: mutedTextColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right_rounded, color: palette.brandDark),
+            ],
+          ),
         ),
       ),
     );

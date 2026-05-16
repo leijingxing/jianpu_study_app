@@ -5,6 +5,7 @@ import '../data/app_settings.dart';
 import '../data/favorites_store.dart';
 import '../data/jianpu_api.dart';
 import '../data/models.dart';
+import '../media/cached_video_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -183,25 +184,52 @@ class _ScoreVideo extends StatefulWidget {
 }
 
 class _ScoreVideoState extends State<_ScoreVideo> {
-  late final VideoPlayerController _controller;
+  VideoPlayerController? _controller;
   late final Future<void> _initialize;
   late var _muted = widget.mutedByDefault;
+  var _cacheAvailable = false;
+  var _loadedFromCache = false;
+  var _disposed = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
-    _initialize = _controller.initialize().then((_) {
-      _controller.setVolume(_muted ? 0 : 1);
-      if (mounted) setState(() {});
-    });
-    _controller.addListener(_onControllerChanged);
+    _initialize = _initializeController();
+  }
+
+  Future<void> _initializeController() async {
+    final result = await createCachedVideoController(Uri.parse(widget.url));
+    if (_disposed) {
+      await result.controller.dispose();
+      return;
+    }
+    _controller = result.controller;
+    _cacheAvailable = result.cacheAvailable;
+    _loadedFromCache = result.loadedFromCache;
+    _controller!.addListener(_onControllerChanged);
+    await _controller!.initialize();
+    await _controller!.setVolume(_muted ? 0 : 1);
+    if (mounted) setState(() {});
+  }
+
+  String get _cacheLabel {
+    if (!_cacheAvailable) return '在线播放';
+    return _loadedFromCache ? '已缓存' : '已缓存到本地';
+  }
+
+  IconData get _cacheIcon {
+    if (!_cacheAvailable) return Icons.cloud_outlined;
+    return _loadedFromCache ? Icons.offline_pin_rounded : Icons.download_done;
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onControllerChanged);
-    _controller.dispose();
+    _disposed = true;
+    final controller = _controller;
+    if (controller != null) {
+      controller.removeListener(_onControllerChanged);
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -210,28 +238,31 @@ class _ScoreVideoState extends State<_ScoreVideo> {
   }
 
   void _togglePlay() {
-    if (!_controller.value.isInitialized) return;
-    if (_controller.value.isPlaying) {
-      _controller.pause();
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (controller.value.isPlaying) {
+      controller.pause();
     } else {
-      _controller.play();
+      controller.play();
     }
   }
 
   void _toggleMute() {
-    if (!_controller.value.isInitialized) return;
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
     setState(() => _muted = !_muted);
-    _controller.setVolume(_muted ? 0 : 1);
+    controller.setVolume(_muted ? 0 : 1);
   }
 
   Future<void> _seekBy(Duration offset) async {
-    if (!_controller.value.isInitialized) return;
-    final duration = _controller.value.duration;
-    final next = _controller.value.position + offset;
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final duration = controller.value.duration;
+    final next = controller.value.position + offset;
     final clamped = Duration(
       milliseconds: next.inMilliseconds.clamp(0, duration.inMilliseconds),
     );
-    await _controller.seekTo(clamped);
+    await controller.seekTo(clamped);
   }
 
   @override
@@ -247,6 +278,7 @@ class _ScoreVideoState extends State<_ScoreVideo> {
         child: FutureBuilder<void>(
           future: _initialize,
           builder: (context, snapshot) {
+            final controller = _controller;
             if (snapshot.hasError) {
               return const SizedBox(
                 height: 220,
@@ -258,11 +290,9 @@ class _ScoreVideoState extends State<_ScoreVideo> {
               );
             }
             if (snapshot.connectionState != ConnectionState.done ||
-                !_controller.value.isInitialized) {
-              return const SizedBox(
-                height: 220,
-                child: Center(child: CircularProgressIndicator()),
-              );
+                controller == null ||
+                !controller.value.isInitialized) {
+              return const SizedBox(height: 220, child: _VideoLoadingState());
             }
 
             return Column(
@@ -274,11 +304,19 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                     alignment: Alignment.center,
                     children: [
                       AspectRatio(
-                        aspectRatio: _controller.value.aspectRatio,
-                        child: VideoPlayer(_controller),
+                        aspectRatio: controller.value.aspectRatio,
+                        child: VideoPlayer(controller),
+                      ),
+                      Positioned(
+                        left: 10,
+                        top: 10,
+                        child: _VideoCacheBadge(
+                          icon: _cacheIcon,
+                          label: _cacheLabel,
+                        ),
                       ),
                       AnimatedOpacity(
-                        opacity: _controller.value.isPlaying ? 0 : 1,
+                        opacity: controller.value.isPlaying ? 0 : 1,
                         duration: const Duration(milliseconds: 160),
                         child: Container(
                           width: 54,
@@ -298,7 +336,7 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                   ),
                 ),
                 VideoProgressIndicator(
-                  _controller,
+                  controller,
                   allowScrubbing: true,
                   padding: EdgeInsets.zero,
                   colors: const VideoProgressColors(
@@ -308,10 +346,10 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                   ),
                 ),
                 _VideoControls(
-                  playing: _controller.value.isPlaying,
+                  playing: controller.value.isPlaying,
                   muted: _muted,
-                  position: _controller.value.position,
-                  duration: _controller.value.duration,
+                  position: controller.value.position,
+                  duration: controller.value.duration,
                   onPlay: _togglePlay,
                   onMute: _toggleMute,
                   onRewind: () => _seekBy(const Duration(seconds: -10)),
@@ -320,6 +358,66 @@ class _ScoreVideoState extends State<_ScoreVideo> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _VideoLoadingState extends StatelessWidget {
+  const _VideoLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 12),
+          Text(
+            '正在缓存视频...',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VideoCacheBadge extends StatelessWidget {
+  const _VideoCacheBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.56),
+        borderRadius: BorderRadius.circular(radiusSmall),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 15),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
       ),
     );
