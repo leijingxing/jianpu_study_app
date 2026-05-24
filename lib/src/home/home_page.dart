@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_icons.dart';
+
 import '../data/app_settings.dart';
 import '../data/favorites_store.dart';
 import '../data/jianpu_api.dart';
@@ -170,12 +172,12 @@ class _HomePageState extends State<HomePage> {
     if (_tab == 2) return _buildFavorites();
     if (_error != null && (_dynamicSongs.isEmpty && _imageScores.isEmpty)) {
       return StateView(
-        icon: Icons.wifi_off_rounded,
+        icon: AppIcons.wifiOffRounded,
         title: '接口暂时不可用',
         message: '$_error',
         action: FilledButton.icon(
           onPressed: _load,
-          icon: const Icon(Icons.refresh_rounded),
+          icon: const Icon(AppIcons.refreshRounded),
           label: const Text('重试'),
         ),
       );
@@ -217,7 +219,7 @@ class _HomePageState extends State<HomePage> {
             metric: '练习 ${song.times}',
             badge: song.level > 0 ? '难度 ${song.level}' : '动态谱',
             favorite: favorite,
-            leadingIcon: Icons.graphic_eq_rounded,
+            leadingIcon: AppIcons.graphicEqRounded,
             compact: widget.settings.compactList,
             reduceMotion: widget.settings.reduceMotion,
             onFavorite: () => _favorites.toggle(
@@ -274,8 +276,8 @@ class _HomePageState extends State<HomePage> {
             favorite: favorite,
             imageUrl: item.imageUrl,
             leadingIcon: item.hasVideo
-                ? Icons.play_circle_outline
-                : Icons.image_outlined,
+                ? AppIcons.playCircleOutline
+                : AppIcons.imageOutlined,
             compact: widget.settings.compactList,
             reduceMotion: widget.settings.reduceMotion,
             onFavorite: () => _favorites.toggle(
@@ -298,7 +300,7 @@ class _HomePageState extends State<HomePage> {
     final items = _favorites.items;
     if (items.isEmpty) {
       return const StateView(
-        icon: Icons.bookmark_add_outlined,
+        icon: AppIcons.bookmarkAddOutlined,
         title: '还没有收藏',
         message: '收藏的谱子会放在这里',
       );
@@ -324,8 +326,8 @@ class _HomePageState extends State<HomePage> {
           favorite: true,
           imageUrl: item.imageUrl,
           leadingIcon: item.kind == ScoreKind.dynamic
-              ? Icons.graphic_eq_rounded
-              : Icons.image_outlined,
+              ? AppIcons.graphicEqRounded
+              : AppIcons.imageOutlined,
           compact: widget.settings.compactList,
           reduceMotion: widget.settings.reduceMotion,
           onFavorite: () => _favorites.toggle(item),
@@ -421,7 +423,7 @@ class _HomeHeader extends StatelessWidget {
                     borderRadius: BorderRadius.circular(radiusMedium),
                   ),
                   child: const Icon(
-                    Icons.music_note_rounded,
+                    AppIcons.musicNoteRounded,
                     color: Colors.white,
                     size: 22,
                   ),
@@ -455,7 +457,7 @@ class _HomeHeader extends StatelessWidget {
                 IconButton(
                   tooltip: '设置',
                   onPressed: onSettings,
-                  icon: const Icon(Icons.settings_outlined),
+                  icon: const Icon(AppIcons.settingsOutlined),
                   style: IconButton.styleFrom(
                     fixedSize: const Size(38, 38),
                     foregroundColor: palette.brandDark,
@@ -480,7 +482,7 @@ class _HomeHeader extends StatelessWidget {
                     onSubmitted: onSearch,
                     decoration: InputDecoration(
                       hintText: tab == 1 ? '搜索图片谱标题' : '搜索歌名、歌手、编配',
-                      prefixIcon: const Icon(Icons.search_rounded, size: 21),
+                      prefixIcon: const Icon(AppIcons.searchRounded, size: 21),
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(
@@ -509,7 +511,7 @@ class _HomeHeader extends StatelessWidget {
                                 controller.clear();
                                 onSearch('');
                               },
-                              icon: const Icon(Icons.close_rounded, size: 20),
+                              icon: const Icon(AppIcons.closeRounded, size: 20),
                             ),
                     ),
                   ),
@@ -548,17 +550,17 @@ class _HomeTabs extends StatelessWidget {
             const [
               _HomeTabButton(
                 value: 0,
-                icon: Icons.graphic_eq_rounded,
+                icon: AppIcons.graphicEqRounded,
                 label: '动态谱',
               ),
               _HomeTabButton(
                 value: 1,
-                icon: Icons.image_outlined,
+                icon: AppIcons.imageOutlined,
                 label: '图片谱',
               ),
               _HomeTabButton(
                 value: 2,
-                icon: Icons.bookmark_border_rounded,
+                icon: AppIcons.bookmarkBorderRounded,
                 label: '收藏',
               ),
             ].map((button) {
@@ -651,13 +653,13 @@ class _HomeToolGrid extends StatelessWidget {
         final stacked = constraints.maxWidth < 340;
         final cards = [
           _HomeToolCard(
-            icon: Icons.menu_book_rounded,
+            icon: AppIcons.menuBookRounded,
             title: '简谱练习',
             subtitle: '符号教学 · 逐小节',
             onTap: onPractice,
           ),
           _HomeToolCard(
-            icon: Icons.av_timer_rounded,
+            icon: AppIcons.avTimerRounded,
             title: '专业节拍器',
             subtitle: 'Tap Tempo · 训练',
             onTap: onMetronome,
@@ -752,7 +754,7 @@ class _HomeToolCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(Icons.chevron_right_rounded, color: palette.brandDark),
+              Icon(AppIcons.chevronRightRounded, color: palette.brandDark),
             ],
           ),
         ),
@@ -875,8 +877,8 @@ class ScoreCard extends StatelessWidget {
                     ),
                     child: Icon(
                       favorite
-                          ? Icons.bookmark_rounded
-                          : Icons.bookmark_border_rounded,
+                          ? AppIcons.bookmarkRounded
+                          : AppIcons.bookmarkBorderRounded,
                       key: ValueKey(favorite),
                       color: favorite ? accentColor : const Color(0xFF8B969C),
                     ),
@@ -934,7 +936,7 @@ class _CoverThumb extends StatelessWidget {
           right: -8,
           bottom: -10,
           child: Icon(
-            Icons.graphic_eq_rounded,
+            AppIcons.graphicEqRounded,
             size: 42,
             color: palette.brand.withValues(alpha: 0.12),
           ),

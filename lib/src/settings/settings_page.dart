@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_icons.dart';
+
 import '../data/app_settings.dart';
 import '../pro/jianpu_practice_page.dart';
 import '../pro/metronome_page.dart';
@@ -26,7 +28,7 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 14),
               _SettingsSection(
                 title: '界面',
-                icon: Icons.palette_outlined,
+                icon: AppIcons.paletteOutlined,
                 children: [
                   const _SettingLabel('UI 风格'),
                   const SizedBox(height: 8),
@@ -62,7 +64,7 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 12),
               _SettingsSection(
                 title: '练谱',
-                icon: Icons.graphic_eq_rounded,
+                icon: AppIcons.graphicEqRounded,
                 children: [
                   SwitchListTile(
                     dense: true,
@@ -83,10 +85,10 @@ class SettingsPage extends StatelessWidget {
                   ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.menu_book_rounded),
+                    leading: const Icon(AppIcons.menuBookRounded),
                     title: const Text('简谱练习'),
                     subtitle: const Text('符号教学、节奏拆解和逐小节循环'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
+                    trailing: const Icon(AppIcons.chevronRightRounded),
                     onTap: () => Navigator.of(
                       context,
                     ).pushNamed(JianpuPracticePage.routeName),
@@ -94,10 +96,10 @@ class SettingsPage extends StatelessWidget {
                   ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.av_timer_rounded),
+                    leading: const Icon(AppIcons.avTimerRounded),
                     title: const Text('专业节拍器'),
                     subtitle: const Text('Tap Tempo、细分、重音、训练模式和预设'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
+                    trailing: const Icon(AppIcons.chevronRightRounded),
                     onTap: () => Navigator.of(
                       context,
                     ).pushNamed(MetronomePage.routeName),
@@ -107,7 +109,7 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: settings.reset,
-                icon: const Icon(Icons.restart_alt_rounded),
+                icon: const Icon(AppIcons.restartAltRounded),
                 label: const Text('恢复默认设置'),
               ),
             ],
@@ -142,7 +144,7 @@ class _SettingsHeader extends StatelessWidget {
               color: palette.soft,
               borderRadius: BorderRadius.circular(radiusMedium),
             ),
-            child: Icon(Icons.tune_rounded, color: palette.brand),
+            child: Icon(AppIcons.tuneRounded, color: palette.brand),
           ),
           const SizedBox(width: 12),
           Expanded(

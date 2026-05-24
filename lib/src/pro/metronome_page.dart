@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/app_icons.dart';
+
 import '../audio/tone_synth.dart';
 import '../theme/app_theme.dart';
 
@@ -273,7 +275,7 @@ class _MetronomePageState extends State<MetronomePage> {
           const SizedBox(height: 12),
           _Panel(
             title: '速度',
-            icon: Icons.speed_rounded,
+            icon: AppIcons.speedRounded,
             child: Column(
               children: [
                 _BpmControl(
@@ -295,7 +297,7 @@ class _MetronomePageState extends State<MetronomePage> {
           const SizedBox(height: 12),
           _Panel(
             title: '节奏',
-            icon: Icons.grid_4x4_rounded,
+            icon: AppIcons.grid4x4Rounded,
             child: Column(
               children: [
                 _NumberStepper(
@@ -332,7 +334,7 @@ class _MetronomePageState extends State<MetronomePage> {
           const SizedBox(height: 12),
           _Panel(
             title: '练习',
-            icon: Icons.fitness_center_rounded,
+            icon: AppIcons.fitnessCenterRounded,
             child: Column(
               children: [
                 _SegmentRow<_TrainingMode>(
@@ -425,7 +427,7 @@ class _MetronomePageState extends State<MetronomePage> {
           const SizedBox(height: 12),
           _Panel(
             title: '声音',
-            icon: Icons.tune_rounded,
+            icon: AppIcons.tuneRounded,
             child: _LabeledSlider(
               label: '音量',
               value: _volume,
@@ -439,14 +441,14 @@ class _MetronomePageState extends State<MetronomePage> {
           const SizedBox(height: 12),
           _Panel(
             title: '预设',
-            icon: Icons.library_music_outlined,
+            icon: AppIcons.libraryMusicOutlined,
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 for (final preset in _presets)
                   ActionChip(
-                    avatar: const Icon(Icons.playlist_play_rounded, size: 18),
+                    avatar: const Icon(AppIcons.playlistPlayRounded, size: 18),
                     label: Text(preset.name),
                     onPressed: () => _loadPreset(preset),
                   ),
@@ -505,25 +507,25 @@ class _MetronomeDeck extends StatelessWidget {
           Row(
             children: [
               _MetricPill(
-                icon: Icons.music_note_rounded,
+                icon: AppIcons.musicNoteRounded,
                 text: '$beatsPerBar/4',
               ),
               const SizedBox(width: 8),
               _MetricPill(
-                icon: Icons.call_split_rounded,
+                icon: AppIcons.callSplitRounded,
                 text: '${subdivision}x',
               ),
               const Spacer(),
               if (silent)
                 const _MetricPill(
-                  icon: Icons.volume_off_rounded,
+                  icon: AppIcons.volumeOffRounded,
                   text: '静音训练',
                   alert: true,
                 ),
               if (silent && countIn) const SizedBox(width: 8),
               if (countIn)
                 const _MetricPill(
-                  icon: Icons.timer_rounded,
+                  icon: AppIcons.timerRounded,
                   text: '预备',
                   alert: true,
                 ),
@@ -572,8 +574,8 @@ class _MetronomeDeck extends StatelessWidget {
                       onPressed: onPlay,
                       icon: Icon(
                         playing
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
+                            ? AppIcons.pauseRounded
+                            : AppIcons.playArrowRounded,
                       ),
                       label: Text(playing ? '暂停' : '开始'),
                     ),
@@ -588,19 +590,19 @@ class _MetronomeDeck extends StatelessWidget {
               IconButton.filledTonal(
                 tooltip: '-5 BPM',
                 onPressed: () => onBpmChanged((bpm - 5).clamp(30, 300)),
-                icon: const Icon(Icons.keyboard_double_arrow_down_rounded),
+                icon: const Icon(AppIcons.keyboardDoubleArrowDownRounded),
               ),
               IconButton.filledTonal(
                 tooltip: '-1 BPM',
                 onPressed: () => onBpmChanged((bpm - 1).clamp(30, 300)),
-                icon: const Icon(Icons.remove_rounded),
+                icon: const Icon(AppIcons.removeRounded),
               ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: OutlinedButton.icon(
                     onPressed: onTapTempo,
-                    icon: const Icon(Icons.touch_app_rounded),
+                    icon: const Icon(AppIcons.touchAppRounded),
                     label: const Text('Tap Tempo'),
                   ),
                 ),
@@ -608,12 +610,12 @@ class _MetronomeDeck extends StatelessWidget {
               IconButton.filledTonal(
                 tooltip: '+1 BPM',
                 onPressed: () => onBpmChanged((bpm + 1).clamp(30, 300)),
-                icon: const Icon(Icons.add_rounded),
+                icon: const Icon(AppIcons.addRounded),
               ),
               IconButton.filledTonal(
                 tooltip: '+5 BPM',
                 onPressed: () => onBpmChanged((bpm + 5).clamp(30, 300)),
-                icon: const Icon(Icons.keyboard_double_arrow_up_rounded),
+                icon: const Icon(AppIcons.keyboardDoubleArrowUpRounded),
               ),
             ],
           ),
@@ -847,7 +849,7 @@ class _NumberStepper extends StatelessWidget {
         IconButton.filledTonal(
           tooltip: '减少',
           onPressed: onDecrease,
-          icon: const Icon(Icons.remove_rounded),
+          icon: const Icon(AppIcons.removeRounded),
         ),
         Expanded(
           child: Center(
@@ -864,7 +866,7 @@ class _NumberStepper extends StatelessWidget {
         IconButton.filledTonal(
           tooltip: '增加',
           onPressed: onIncrease,
-          icon: const Icon(Icons.add_rounded),
+          icon: const Icon(AppIcons.addRounded),
         ),
       ],
     );

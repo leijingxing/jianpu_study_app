@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../theme/app_icons.dart';
 import 'package:video_player/video_player.dart';
 
 import '../data/app_settings.dart';
@@ -86,7 +88,7 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
               ),
             ),
             icon: Icon(
-              favorite ? Icons.bookmark_rounded : Icons.bookmark_border,
+              favorite ? AppIcons.bookmarkRounded : AppIcons.bookmarkBorder,
             ),
           ),
         ],
@@ -99,12 +101,12 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return StateView(
-        icon: Icons.error_outline_rounded,
+        icon: AppIcons.errorOutlineRounded,
         title: '图片谱加载失败',
         message: '$_error',
         action: FilledButton.icon(
           onPressed: _load,
-          icon: const Icon(Icons.refresh_rounded),
+          icon: const Icon(AppIcons.refreshRounded),
           label: const Text('重试'),
         ),
       );
@@ -151,7 +153,7 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
         const SizedBox(height: 18),
         if (detail.imageUrls.isEmpty && detail.videoUrls.isEmpty)
           const StateView(
-            icon: Icons.image_not_supported_outlined,
+            icon: AppIcons.imageNotSupportedOutlined,
             title: '没有找到媒体',
             message: '文章里没有可识别的图片或视频。',
           )
@@ -218,8 +220,10 @@ class _ScoreVideoState extends State<_ScoreVideo> {
   }
 
   IconData get _cacheIcon {
-    if (!_cacheAvailable) return Icons.cloud_outlined;
-    return _loadedFromCache ? Icons.offline_pin_rounded : Icons.download_done;
+    if (!_cacheAvailable) return AppIcons.cloudOutlined;
+    return _loadedFromCache
+        ? AppIcons.offlinePinRounded
+        : AppIcons.downloadDone;
   }
 
   @override
@@ -283,7 +287,7 @@ class _ScoreVideoState extends State<_ScoreVideo> {
               return const SizedBox(
                 height: 220,
                 child: StateView(
-                  icon: Icons.videocam_off_outlined,
+                  icon: AppIcons.videocamOffOutlined,
                   title: '视频加载失败',
                   message: '当前视频地址不可访问。',
                 ),
@@ -326,7 +330,7 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                             borderRadius: BorderRadius.circular(radiusMedium),
                           ),
                           child: const Icon(
-                            Icons.play_arrow_rounded,
+                            AppIcons.playArrowRounded,
                             color: Colors.white,
                             size: 36,
                           ),
@@ -457,19 +461,19 @@ class _VideoControls extends StatelessWidget {
             tooltip: playing ? '暂停' : '播放',
             onPressed: onPlay,
             icon: Icon(
-              playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              playing ? AppIcons.pauseRounded : AppIcons.playArrowRounded,
               color: Colors.white,
             ),
           ),
           IconButton(
             tooltip: '后退 10 秒',
             onPressed: onRewind,
-            icon: const Icon(Icons.replay_10_rounded, color: Colors.white70),
+            icon: const Icon(AppIcons.replay10Rounded, color: Colors.white70),
           ),
           IconButton(
             tooltip: '前进 10 秒',
             onPressed: onForward,
-            icon: const Icon(Icons.forward_10_rounded, color: Colors.white70),
+            icon: const Icon(AppIcons.forward10Rounded, color: Colors.white70),
           ),
           Expanded(
             child: Text(
@@ -486,7 +490,7 @@ class _VideoControls extends StatelessWidget {
             tooltip: muted ? '打开声音' : '静音',
             onPressed: onMute,
             icon: Icon(
-              muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+              muted ? AppIcons.volumeOffRounded : AppIcons.volumeUpRounded,
               color: Colors.white,
             ),
           ),
@@ -536,7 +540,7 @@ class _ScoreImage extends StatelessWidget {
             errorBuilder: (_, _, _) => const SizedBox(
               height: 220,
               child: StateView(
-                icon: Icons.broken_image_outlined,
+                icon: AppIcons.brokenImageOutlined,
                 title: '图片加载失败',
                 message: '当前图片地址不可访问。',
               ),

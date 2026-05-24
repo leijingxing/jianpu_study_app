@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../theme/app_icons.dart';
+
 import '../audio/tone_synth.dart';
 import '../data/models.dart';
 import '../theme/app_theme.dart';
@@ -273,7 +275,7 @@ class _IntroCard extends StatelessWidget {
               color: palette.soft,
               borderRadius: BorderRadius.circular(radiusMedium),
             ),
-            child: Icon(Icons.menu_book_rounded, color: palette.brand),
+            child: Icon(AppIcons.menuBookRounded, color: palette.brand),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -301,7 +303,7 @@ class _IntroCard extends StatelessWidget {
           IconButton.filled(
             tooltip: mode == _PracticeMode.lyric ? '开始带词练' : '开始唱谱',
             onPressed: onStart,
-            icon: const Icon(Icons.play_arrow_rounded),
+            icon: const Icon(AppIcons.playArrowRounded),
           ),
         ],
       ),
@@ -327,7 +329,7 @@ class _SymbolTeachingPanel extends StatelessWidget {
     final topic = _topics[selectedIndex];
     return _Panel(
       title: '简谱符号教学',
-      icon: Icons.school_outlined,
+      icon: AppIcons.schoolOutlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -495,7 +497,7 @@ class _LearningFlowCard extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: onNext,
-              icon: const Icon(Icons.arrow_forward_rounded),
+              icon: const Icon(AppIcons.arrowForwardRounded),
               label: Text(buttonText),
             ),
           ),
@@ -600,7 +602,7 @@ class _MeasurePracticePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Panel(
       title: '乐句练习',
-      icon: Icons.repeat_rounded,
+      icon: AppIcons.repeatRounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -609,7 +611,7 @@ class _MeasurePracticePanel extends StatelessWidget {
               IconButton.filledTonal(
                 tooltip: '上一乐句',
                 onPressed: onPrevious,
-                icon: const Icon(Icons.skip_previous_rounded),
+                icon: const Icon(AppIcons.skipPreviousRounded),
               ),
               Expanded(
                 child: Center(
@@ -627,7 +629,7 @@ class _MeasurePracticePanel extends StatelessWidget {
               IconButton.filledTonal(
                 tooltip: '下一乐句',
                 onPressed: onNext,
-                icon: const Icon(Icons.skip_next_rounded),
+                icon: const Icon(AppIcons.skipNextRounded),
               ),
             ],
           ),
@@ -659,7 +661,7 @@ class _MeasurePracticePanel extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onPlay,
                 icon: Icon(
-                  playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  playing ? AppIcons.pauseRounded : AppIcons.playArrowRounded,
                 ),
                 label: Text(playing ? '暂停' : '播放'),
               ),
@@ -668,7 +670,7 @@ class _MeasurePracticePanel extends StatelessWidget {
                 label: const Text('循环'),
                 selected: loop,
                 onSelected: onLoopChanged,
-                avatar: const Icon(Icons.loop_rounded, size: 18),
+                avatar: const Icon(AppIcons.loopRounded, size: 18),
               ),
               const Spacer(),
               Text(
@@ -717,21 +719,21 @@ class _ModeSelector extends StatelessWidget {
         _ModeChip(
           value: _PracticeMode.listen,
           selected: mode == _PracticeMode.listen,
-          icon: Icons.hearing_rounded,
+          icon: AppIcons.hearingRounded,
           label: '听音',
           onSelected: onChanged,
         ),
         _ModeChip(
           value: _PracticeMode.solfege,
           selected: mode == _PracticeMode.solfege,
-          icon: Icons.record_voice_over_rounded,
+          icon: AppIcons.recordVoiceOverRounded,
           label: '唱谱',
           onSelected: onChanged,
         ),
         _ModeChip(
           value: _PracticeMode.lyric,
           selected: mode == _PracticeMode.lyric,
-          icon: Icons.lyrics_rounded,
+          icon: AppIcons.lyricsRounded,
           label: '带词',
           onSelected: onChanged,
         ),
@@ -901,7 +903,7 @@ class _PracticeStepsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _Panel(
       title: '推荐练法',
-      icon: Icons.fact_check_outlined,
+      icon: AppIcons.factCheckOutlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/app_icons.dart';
+
 import '../audio/tone_synth.dart';
 import '../data/app_settings.dart';
 import '../data/key_transpose.dart';
@@ -35,6 +37,7 @@ class DynamicDetailPage extends StatefulWidget {
 class _DynamicDetailPageState extends State<DynamicDetailPage> {
   final _scrollController = ScrollController();
   final _synth = ToneSynth();
+  final _playbackClock = Stopwatch();
   Timer? _scrollTimer;
   MusicDetail? _detail;
   ScoreDocument? _document;
@@ -45,20 +48,14 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   var _playing = false;
   var _speed = 0.16;
   var _soundEnabled = true;
-  var _metronomeEnabled = false;
   var _rewriteNotation = false;
   var _volume = 0.68;
-  var _metronomeVolume = 0.58;
-  var _beatsPerBar = 4;
-  var _subdivision = 1;
-  var _accentFirstBeat = true;
+  var _instrumentProgram = MelodyInstrument.defaultProgram;
   var _selectedKey = '';
   var _activeNoteIndex = -1;
   var _lastSoundNoteIndex = -1;
-  var _lastMetronomeTickIndex = -1;
-  var _currentBeatInBar = -1;
-  var _currentSubdivision = 0;
   var _elapsedMs = 0;
+  var _playbackAnchorMs = 0;
 
   @override
   void initState() {
@@ -71,6 +68,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   @override
   void dispose() {
     _scrollTimer?.cancel();
+    _playbackClock.stop();
     _synth.dispose();
     _scrollController.dispose();
     widget.favorites.removeListener(_onFavoriteChanged);
@@ -96,10 +94,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
           : detail.selectedKey;
       _activeNoteIndex = -1;
       _lastSoundNoteIndex = -1;
-      _lastMetronomeTickIndex = -1;
-      _currentBeatInBar = -1;
-      _currentSubdivision = 0;
       _elapsedMs = 0;
+      _playbackAnchorMs = 0;
     } catch (error) {
       _error = error;
     } finally {
@@ -108,47 +104,64 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   }
 
   void _togglePlay() {
-    if (!_playing &&
-        _timedNotes.isNotEmpty &&
-        _elapsedMs >= _timedNotes.last.endMs) {
-      _elapsedMs = 0;
-      _lastSoundNoteIndex = -1;
-      _lastMetronomeTickIndex = -1;
+    if (_playing) {
+      _elapsedMs = _playbackAnchorMs + _playbackClock.elapsedMilliseconds;
+      _playbackClock.stop();
+      _scrollTimer?.cancel();
+      setState(() => _playing = false);
+      return;
     }
-    setState(() => _playing = !_playing);
+
+    if (_timedNotes.isEmpty) return;
+    if (_timedNotes.isNotEmpty && _elapsedMs >= _timedNotes.last.endMs) {
+      _resetPlaybackPosition();
+    }
+    _playbackAnchorMs = _elapsedMs;
+    _playbackClock
+      ..reset()
+      ..start();
+    setState(() => _playing = true);
     _scrollTimer?.cancel();
-    if (!_playing) return;
-    _handleMetronomeTick(_elapsedMs, updateUi: true);
-    _scrollTimer = Timer.periodic(const Duration(milliseconds: 48), (_) {
-      if (!mounted) return;
-      _elapsedMs += 48;
-      final noteIndex = _noteIndexAt(_elapsedMs);
-      if (noteIndex != _lastSoundNoteIndex) {
-        _lastSoundNoteIndex = noteIndex;
-        _playTimedNote(noteIndex);
-      }
-      _handleMetronomeTick(_elapsedMs);
-      setState(() => _activeNoteIndex = noteIndex);
-      if (_scrollController.hasClients && _speed > 0) {
-        final next = math.min(
-          _scrollController.position.maxScrollExtent,
-          _scrollController.offset + _speed,
-        );
-        _scrollController.jumpTo(next);
-      }
-      if (_timedNotes.isNotEmpty && _elapsedMs >= _timedNotes.last.endMs) {
-        _scrollTimer?.cancel();
-        setState(() {
-          _playing = false;
-          _activeNoteIndex = -1;
-          _lastSoundNoteIndex = -1;
-          _lastMetronomeTickIndex = -1;
-          _currentBeatInBar = -1;
-          _currentSubdivision = 0;
-          _elapsedMs = 0;
-        });
-      }
-    });
+    _tickPlayback();
+    _scrollTimer = Timer.periodic(
+      const Duration(milliseconds: 32),
+      (_) => _tickPlayback(),
+    );
+  }
+
+  void _tickPlayback() {
+    if (!mounted || !_playing) return;
+    final previousElapsed = _elapsedMs;
+    _elapsedMs = _playbackAnchorMs + _playbackClock.elapsedMilliseconds;
+    final noteIndex = _noteIndexAt(_elapsedMs);
+    if (noteIndex != _lastSoundNoteIndex) {
+      _lastSoundNoteIndex = noteIndex;
+      _playTimedNote(noteIndex);
+    }
+    setState(() => _activeNoteIndex = noteIndex);
+    if (_scrollController.hasClients && _speed > 0) {
+      final delta = (_elapsedMs - previousElapsed).clamp(0, 80);
+      final next = math.min(
+        _scrollController.position.maxScrollExtent,
+        _scrollController.offset + _speed * (delta / 48),
+      );
+      _scrollController.jumpTo(next);
+    }
+    if (_timedNotes.isNotEmpty && _elapsedMs >= _timedNotes.last.endMs) {
+      _scrollTimer?.cancel();
+      _playbackClock.stop();
+      setState(() {
+        _playing = false;
+        _resetPlaybackPosition();
+      });
+    }
+  }
+
+  void _resetPlaybackPosition() {
+    _activeNoteIndex = -1;
+    _lastSoundNoteIndex = -1;
+    _elapsedMs = 0;
+    _playbackAnchorMs = 0;
   }
 
   @override
@@ -182,7 +195,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
               children: [
                 _ToolbarButton(
                   tooltip: '返回',
-                  icon: Icons.arrow_back_rounded,
+                  icon: AppIcons.arrowBackRounded,
                   onPressed: () => Navigator.of(context).maybePop(),
                 ),
                 const SizedBox(width: 8),
@@ -219,7 +232,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                 ),
                 _ToolbarButton(
                   tooltip: '唱谱练习',
-                  icon: Icons.record_voice_over_rounded,
+                  icon: AppIcons.recordVoiceOverRounded,
                   onPressed: detail == null || _document == null
                       ? null
                       : () => _openPractice(detail, _document!),
@@ -227,8 +240,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                 _ToolbarButton(
                   tooltip: favorite ? '取消收藏' : '收藏',
                   icon: favorite
-                      ? Icons.bookmark_rounded
-                      : Icons.bookmark_border_rounded,
+                      ? AppIcons.bookmarkRounded
+                      : AppIcons.bookmarkBorderRounded,
                   onPressed: detail == null
                       ? null
                       : () => widget.favorites.toggle(_favoriteFor(detail)),
@@ -237,8 +250,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                   tooltip: '设置',
                   onPressed: detail == null
                       ? null
-                      : () => _openSettings(detail, favorite),
-                  icon: const Icon(Icons.tune_rounded, size: 25),
+                      : () => _openSettings(detail),
+                  icon: const Icon(AppIcons.tuneRounded, size: 25),
                   style: IconButton.styleFrom(
                     fixedSize: const Size(40, 40),
                     foregroundColor: brandDarkColor,
@@ -252,29 +265,12 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       bottomNavigationBar: _ReaderControls(
         playing: _playing,
         soundEnabled: _soundEnabled,
-        metronomeEnabled: _metronomeEnabled,
         speed: _speed,
         selectedKey: _selectedKey,
-        beatsPerBar: _beatsPerBar,
-        activeBeat: _currentBeatInBar,
-        activeSubdivision: _currentSubdivision,
-        subdivision: _subdivision,
         onPlay: _togglePlay,
         onSoundToggle: () => setState(() => _soundEnabled = !_soundEnabled),
-        onMetronomeToggle: () => setState(() {
-          _metronomeEnabled = !_metronomeEnabled;
-          _lastMetronomeTickIndex = -1;
-          if (!_metronomeEnabled) {
-            _currentBeatInBar = -1;
-            _currentSubdivision = 0;
-          } else if (_playing) {
-            _handleMetronomeTick(_elapsedMs);
-          }
-        }),
         onSpeedChanged: (value) => setState(() => _speed = value),
-        onSettings: detail == null
-            ? null
-            : () => _openSettings(detail, favorite),
+        onSettings: detail == null ? null : () => _openSettings(detail),
       ),
       body: _buildDetailBody(),
     );
@@ -283,35 +279,16 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   double _beatMsFor(MusicDetail detail) =>
       detail.bpm <= 0 ? 1000.0 : 60000 / detail.bpm;
 
-  void _handleMetronomeTick(int elapsedMs, {bool updateUi = false}) {
-    final detail = _detail;
-    if (!_metronomeEnabled || detail == null || _subdivision <= 0) return;
-    final tickMs = _beatMsFor(detail) / _subdivision;
-    final tickIndex = (elapsedMs / tickMs).floor();
-    if (tickIndex == _lastMetronomeTickIndex) return;
-
-    _lastMetronomeTickIndex = tickIndex;
-    _currentBeatInBar = (tickIndex ~/ _subdivision) % _beatsPerBar;
-    _currentSubdivision = tickIndex % _subdivision;
-    final accented =
-        _accentFirstBeat && _currentBeatInBar == 0 && _currentSubdivision == 0;
-    _synth.playClick(accented: accented, volume: _metronomeVolume);
-
-    if (updateUi && mounted) {
-      setState(() {});
-    }
-  }
-
   Widget _buildDetailBody() {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return StateView(
-        icon: Icons.error_outline_rounded,
+        icon: AppIcons.errorOutlineRounded,
         title: '谱面加载失败',
         message: '$_error',
         action: FilledButton.icon(
           onPressed: _load,
-          icon: const Icon(Icons.refresh_rounded),
+          icon: const Icon(AppIcons.refreshRounded),
           label: const Text('重试'),
         ),
       );
@@ -388,6 +365,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       raw: raw,
       key: _selectedKey,
       durationMs: timed.endMs - timed.startMs,
+      program: _instrumentProgram,
       volume: _volume,
     );
   }
@@ -431,7 +409,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     return raw.contains('.') ? extended * 1.5 : extended;
   }
 
-  void _openSettings(MusicDetail detail, bool favorite) {
+  void _openSettings(MusicDetail detail) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -440,8 +418,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       builder: (context) {
         return DraggableScrollableSheet(
           expand: false,
-          initialChildSize: 0.72,
-          minChildSize: 0.42,
+          initialChildSize: 0.78,
+          minChildSize: 0.48,
           maxChildSize: 0.9,
           builder: (context, scrollController) {
             return StatefulBuilder(
@@ -470,14 +448,28 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         IconButton(
                           tooltip: '关闭',
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close_rounded),
+                          icon: const Icon(AppIcons.closeRounded),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     _SettingsSection(
-                      title: '谱面',
-                      icon: Icons.visibility_outlined,
+                      title: '音色',
+                      icon: AppIcons.musicNoteRounded,
+                      children: [
+                        _InstrumentSelector(
+                          selectedProgram: _instrumentProgram,
+                          onSelected: (program) {
+                            setState(() => _instrumentProgram = program);
+                            setSheetState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SettingsSection(
+                      title: '显示',
+                      icon: AppIcons.visibilityOutlined,
                       children: [
                         _SettingSlider(
                           label: '谱面大小',
@@ -495,19 +487,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                     const SizedBox(height: 12),
                     _SettingsSection(
                       title: '播放',
-                      icon: Icons.play_circle_outline_rounded,
+                      icon: AppIcons.playCircleOutlineRounded,
                       children: [
-                        _SettingSlider(
-                          label: '滚动速度',
-                          value: _speed,
-                          min: 0,
-                          max: 1.5,
-                          divisions: 15,
-                          onChanged: (value) {
-                            setState(() => _speed = value);
-                            setSheetState(() {});
-                          },
-                        ),
                         SwitchListTile(
                           dense: true,
                           contentPadding: EdgeInsets.zero,
@@ -518,26 +499,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                           ),
                           onChanged: (value) {
                             setState(() => _soundEnabled = value);
-                            setSheetState(() {});
-                          },
-                        ),
-                        SwitchListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          value: _metronomeEnabled,
-                          title: const Text('节拍器'),
-                          subtitle: Text(
-                            _metronomeEnabled ? '播放时跟随谱面 BPM 点击' : '播放时不播放点击声',
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _metronomeEnabled = value;
-                              _lastMetronomeTickIndex = -1;
-                              if (!value) {
-                                _currentBeatInBar = -1;
-                                _currentSubdivision = 0;
-                              }
-                            });
                             setSheetState(() {});
                           },
                         ),
@@ -552,78 +513,14 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                             setSheetState(() {});
                           },
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _SettingsSection(
-                      title: '节拍器',
-                      icon: Icons.av_timer_rounded,
-                      children: [
-                        _MetronomePreview(
-                          bpm: detail.bpm <= 0 ? 60 : detail.bpm,
-                          beatsPerBar: _beatsPerBar,
-                          activeBeat: _currentBeatInBar,
-                          activeSubdivision: _currentSubdivision,
-                          subdivision: _subdivision,
-                          enabled: _metronomeEnabled,
-                          accentFirstBeat: _accentFirstBeat,
-                        ),
-                        const SizedBox(height: 10),
-                        _StepControl(
-                          label: '拍号',
-                          value: '$_beatsPerBar/4',
-                          onDecrease: _beatsPerBar <= 1
-                              ? null
-                              : () {
-                                  setState(() {
-                                    _beatsPerBar--;
-                                    _lastMetronomeTickIndex = -1;
-                                    _currentBeatInBar = -1;
-                                  });
-                                  setSheetState(() {});
-                                },
-                          onIncrease: _beatsPerBar >= 12
-                              ? null
-                              : () {
-                                  setState(() {
-                                    _beatsPerBar++;
-                                    _lastMetronomeTickIndex = -1;
-                                    _currentBeatInBar = -1;
-                                  });
-                                  setSheetState(() {});
-                                },
-                        ),
-                        const SizedBox(height: 8),
-                        _SubdivisionSelector(
-                          value: _subdivision,
-                          onChanged: (value) {
-                            setState(() {
-                              _subdivision = value;
-                              _lastMetronomeTickIndex = -1;
-                              _currentSubdivision = 0;
-                            });
-                            setSheetState(() {});
-                          },
-                        ),
-                        SwitchListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          value: _accentFirstBeat,
-                          title: const Text('强拍提示'),
-                          subtitle: const Text('每小节第一拍使用更亮的点击声'),
-                          onChanged: (value) {
-                            setState(() => _accentFirstBeat = value);
-                            setSheetState(() {});
-                          },
-                        ),
                         _SettingSlider(
-                          label: '点击音量',
-                          value: _metronomeVolume,
+                          label: '滚动速度',
+                          value: _speed,
                           min: 0,
-                          max: 1,
-                          divisions: 10,
+                          max: 1.5,
+                          divisions: 15,
                           onChanged: (value) {
-                            setState(() => _metronomeVolume = value);
+                            setState(() => _speed = value);
                             setSheetState(() {});
                           },
                         ),
@@ -632,7 +529,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                     const SizedBox(height: 12),
                     _SettingsSection(
                       title: '调式',
-                      icon: Icons.piano_outlined,
+                      icon: AppIcons.pianoOutlined,
                       children: [
                         _KeySelector(
                           selectedKey: _selectedKey,
@@ -653,22 +550,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                           },
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          widget.favorites.toggle(_favoriteFor(detail));
-                          Navigator.of(context).pop();
-                        },
-                        icon: Icon(
-                          favorite
-                              ? Icons.bookmark_rounded
-                              : Icons.bookmark_border_rounded,
-                        ),
-                        label: Text(favorite ? '取消收藏' : '收藏谱子'),
-                      ),
                     ),
                   ],
                 );
@@ -725,32 +606,20 @@ class _ReaderControls extends StatelessWidget {
   const _ReaderControls({
     required this.playing,
     required this.soundEnabled,
-    required this.metronomeEnabled,
     required this.speed,
     required this.selectedKey,
-    required this.beatsPerBar,
-    required this.activeBeat,
-    required this.activeSubdivision,
-    required this.subdivision,
     required this.onPlay,
     required this.onSoundToggle,
-    required this.onMetronomeToggle,
     required this.onSpeedChanged,
     required this.onSettings,
   });
 
   final bool playing;
   final bool soundEnabled;
-  final bool metronomeEnabled;
   final double speed;
   final String selectedKey;
-  final int beatsPerBar;
-  final int activeBeat;
-  final int activeSubdivision;
-  final int subdivision;
   final VoidCallback onPlay;
   final VoidCallback onSoundToggle;
-  final VoidCallback onMetronomeToggle;
   final ValueChanged<double> onSpeedChanged;
   final VoidCallback? onSettings;
 
@@ -759,110 +628,82 @@ class _ReaderControls extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        height: 86,
-        padding: const EdgeInsets.fromLTRB(12, 7, 12, 8),
+        height: 72,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         decoration: const BoxDecoration(
           color: paperTintColor,
           border: Border(top: BorderSide(color: lineColor)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            Row(
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutCubic,
-                  decoration: BoxDecoration(
-                    color: playing ? accentColor : brandColor,
-                    borderRadius: BorderRadius.circular(radiusMedium),
-                  ),
-                  child: IconButton(
-                    tooltip: playing ? '暂停' : '播放',
-                    onPressed: onPlay,
-                    icon: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 160),
-                      child: Icon(
-                        playing
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        key: ValueKey(playing),
-                        color: Colors.white,
-                      ),
-                    ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                color: playing ? accentColor : brandColor,
+                borderRadius: BorderRadius.circular(radiusMedium),
+              ),
+              child: IconButton(
+                tooltip: playing ? '暂停' : '播放',
+                onPressed: onPlay,
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 160),
+                  child: Icon(
+                    playing ? AppIcons.pauseRounded : AppIcons.playArrowRounded,
+                    key: ValueKey(playing),
+                    color: Colors.white,
                   ),
                 ),
-                IconButton(
-                  tooltip: soundEnabled ? '关闭声音' : '打开声音',
-                  onPressed: onSoundToggle,
-                  icon: Icon(
-                    soundEnabled
-                        ? Icons.volume_up_rounded
-                        : Icons.volume_off_rounded,
-                    color: soundEnabled ? brandColor : mutedTextColor,
-                  ),
-                ),
-                IconButton(
-                  tooltip: metronomeEnabled ? '关闭节拍器' : '打开节拍器',
-                  onPressed: onMetronomeToggle,
-                  icon: Icon(
-                    metronomeEnabled
-                        ? Icons.av_timer_rounded
-                        : Icons.timer_off_outlined,
-                    color: metronomeEnabled ? accentColor : mutedTextColor,
-                  ),
-                ),
-                const SizedBox(width: 2),
-                Container(
-                  height: 34,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: softGreenColor,
-                    borderRadius: BorderRadius.circular(radiusMedium),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    selectedKey.isEmpty ? '1=-' : '1=$selectedKey',
-                    style: const TextStyle(
-                      color: brandDarkColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.speed_rounded,
-                  size: 18,
-                  color: mutedTextColor,
-                ),
-                Expanded(
-                  child: Slider(
-                    min: 0,
-                    max: 1.5,
-                    divisions: 15,
-                    value: speed,
-                    label: speed.toStringAsFixed(1),
-                    onChanged: onSpeedChanged,
-                  ),
-                ),
-                IconButton(
-                  tooltip: '设置',
-                  onPressed: onSettings,
-                  icon: const Icon(Icons.tune_rounded, color: brandDarkColor),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 3),
-            _MetronomePreview(
-              bpm: 0,
-              beatsPerBar: beatsPerBar,
-              activeBeat: activeBeat,
-              activeSubdivision: activeSubdivision,
-              subdivision: subdivision,
-              enabled: metronomeEnabled,
-              accentFirstBeat: true,
-              compact: true,
+            IconButton(
+              tooltip: soundEnabled ? '关闭声音' : '打开声音',
+              onPressed: onSoundToggle,
+              icon: Icon(
+                soundEnabled
+                    ? AppIcons.volumeUpRounded
+                    : AppIcons.volumeOffRounded,
+                color: soundEnabled ? brandColor : mutedTextColor,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: softGreenColor,
+                borderRadius: BorderRadius.circular(radiusMedium),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                selectedKey.isEmpty ? '1=-' : '1=$selectedKey',
+                style: const TextStyle(
+                  color: brandDarkColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              AppIcons.speedRounded,
+              size: 18,
+              color: mutedTextColor,
+            ),
+            Expanded(
+              child: Slider(
+                min: 0,
+                max: 1.5,
+                divisions: 15,
+                value: speed,
+                label: speed.toStringAsFixed(1),
+                onChanged: onSpeedChanged,
+              ),
+            ),
+            IconButton(
+              tooltip: '设置',
+              onPressed: onSettings,
+              icon: const Icon(AppIcons.tuneRounded, color: brandDarkColor),
             ),
           ],
         ),
@@ -945,7 +786,7 @@ class _MetronomePreview extends StatelessWidget {
           Row(
             children: [
               Icon(
-                enabled ? Icons.av_timer_rounded : Icons.timer_off_outlined,
+                enabled ? AppIcons.avTimerRounded : AppIcons.timerOffOutlined,
                 size: 19,
                 color: enabled ? accentColor : mutedTextColor,
               ),
@@ -994,100 +835,6 @@ class _MetronomePreview extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-class _StepControl extends StatelessWidget {
-  const _StepControl({
-    required this.label,
-    required this.value,
-    required this.onDecrease,
-    required this.onIncrease,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback? onDecrease;
-  final VoidCallback? onIncrease;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 76,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: mutedTextColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        IconButton.filledTonal(
-          tooltip: '减少',
-          onPressed: onDecrease,
-          icon: const Icon(Icons.remove_rounded),
-        ),
-        Expanded(
-          child: Center(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: inkColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ),
-        IconButton.filledTonal(
-          tooltip: '增加',
-          onPressed: onIncrease,
-          icon: const Icon(Icons.add_rounded),
-        ),
-      ],
-    );
-  }
-}
-
-class _SubdivisionSelector extends StatelessWidget {
-  const _SubdivisionSelector({required this.value, required this.onChanged});
-
-  final int value;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const SizedBox(
-          width: 76,
-          child: Text(
-            '细分',
-            style: TextStyle(
-              color: mutedTextColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        Expanded(
-          child: SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 1, label: Text('1')),
-              ButtonSegment(value: 2, label: Text('2')),
-              ButtonSegment(value: 3, label: Text('3')),
-              ButtonSegment(value: 4, label: Text('4')),
-            ],
-            selected: {value},
-            showSelectedIcon: false,
-            onSelectionChanged: (selection) => onChanged(selection.single),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1200,6 +947,33 @@ class _KeySelector extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InstrumentSelector extends StatelessWidget {
+  const _InstrumentSelector({
+    required this.selectedProgram,
+    required this.onSelected,
+  });
+
+  final int selectedProgram;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final instrument in melodyInstruments)
+          ChoiceChip(
+            label: Text('${instrument.name} · ${instrument.group}'),
+            selected: instrument.program == selectedProgram,
+            onSelected: (_) => onSelected(instrument.program),
+            visualDensity: VisualDensity.compact,
+          ),
+      ],
     );
   }
 }
