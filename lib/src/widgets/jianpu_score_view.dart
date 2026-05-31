@@ -70,7 +70,7 @@ class _ScoreNote {
   int get highDotCount => "'".allMatches(raw).length;
 
   String get display {
-    return raw.replaceAll(RegExp(r"[()_=\-.,']"), '').trim();
+    return mainJianpuToken(raw).replaceAll(RegExp(r"[()_=\-.,']"), '').trim();
   }
 }
 
@@ -146,13 +146,7 @@ class _ScoreLayout {
   }) {
     final noteTexts = <String>[];
     for (final line in document.notation) {
-      final matches = RegExp(r'\||[^\s|]+').allMatches(line);
-      for (final match in matches) {
-        final raw = match.group(0)!.trim();
-        if (raw.isEmpty) continue;
-        if (RegExp(r'^\d+/\d+$').hasMatch(raw)) continue;
-        noteTexts.add(raw);
-      }
+      noteTexts.addAll(tokenizeNotationLine(line));
     }
 
     final measures = <_ScoreMeasure>[];

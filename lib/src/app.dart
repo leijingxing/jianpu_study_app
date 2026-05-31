@@ -39,7 +39,8 @@ class _JianpuStudyAppState extends State<JianpuStudyApp> {
           theme: buildAppTheme(style: _settings.uiStyle),
           home: HomePage(settings: _settings),
           routes: {
-            JianpuPracticePage.routeName: (_) => const JianpuPracticePage(),
+            JianpuPracticePage.routeName: (_) =>
+                JianpuPracticePage(settings: _settings),
             MetronomePage.routeName: (_) => const MetronomePage(),
           },
         );

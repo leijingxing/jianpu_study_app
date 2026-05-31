@@ -61,6 +61,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
   void initState() {
     super.initState();
     _soundEnabled = widget.settings.defaultSoundEnabled;
+    _instrumentProgram = widget.settings.melodyInstrumentProgram;
     widget.favorites.addListener(_onFavoriteChanged);
     _load();
   }
@@ -380,12 +381,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     final result = <_TimedNote>[];
 
     for (final line in document.notation) {
-      final matches = RegExp(r'\||[^\s|]+').allMatches(line);
-      for (final match in matches) {
-        final raw = match.group(0)!.trim();
-        if (raw.isEmpty || raw == '|' || RegExp(r'^\d+/\d+$').hasMatch(raw)) {
-          continue;
-        }
+      for (final raw in tokenizeNotationLine(line)) {
+        if (raw == '|') continue;
         final beats = _beatsFor(raw);
         final durationMs = math.max(80.0, beats * beatMs);
         result.add(
@@ -461,6 +458,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                           selectedProgram: _instrumentProgram,
                           onSelected: (program) {
                             setState(() => _instrumentProgram = program);
+                            widget.settings.setMelodyInstrumentProgram(program);
                             setSheetState(() {});
                           },
                         ),
@@ -566,6 +564,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => JianpuPracticePage(
+          settings: widget.settings,
           title: detail.title.isEmpty ? widget.song.title : detail.title,
           detail: detail,
           document: document,
@@ -685,11 +684,7 @@ class _ReaderControls extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(
-              AppIcons.speedRounded,
-              size: 18,
-              color: mutedTextColor,
-            ),
+            const Icon(AppIcons.speedRounded, size: 18, color: mutedTextColor),
             Expanded(
               child: Slider(
                 min: 0,
@@ -707,133 +702,6 @@ class _ReaderControls extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _MetronomePreview extends StatelessWidget {
-  const _MetronomePreview({
-    required this.bpm,
-    required this.beatsPerBar,
-    required this.activeBeat,
-    required this.activeSubdivision,
-    required this.subdivision,
-    required this.enabled,
-    required this.accentFirstBeat,
-    this.compact = false,
-  });
-
-  final int bpm;
-  final int beatsPerBar;
-  final int activeBeat;
-  final int activeSubdivision;
-  final int subdivision;
-  final bool enabled;
-  final bool accentFirstBeat;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final dots = List.generate(beatsPerBar, (index) {
-      final active = enabled && index == activeBeat;
-      final strong = accentFirstBeat && index == 0;
-      return Expanded(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 110),
-          height: compact ? 9 : 36,
-          margin: EdgeInsets.symmetric(horizontal: compact ? 2 : 3),
-          decoration: BoxDecoration(
-            color: active
-                ? (strong ? accentColor : brandColor)
-                : (strong ? softGreenColor : Colors.white),
-            border: Border.all(
-              color: active
-                  ? (strong ? accentColor : brandColor)
-                  : (strong ? brandColor.withValues(alpha: 0.5) : lineColor),
-            ),
-            borderRadius: BorderRadius.circular(compact ? 5 : radiusSmall),
-          ),
-          alignment: Alignment.center,
-          child: compact
-              ? null
-              : Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    color: active ? Colors.white : mutedTextColor,
-                    fontSize: 13,
-                    fontWeight: strong ? FontWeight.w900 : FontWeight.w700,
-                  ),
-                ),
-        ),
-      );
-    });
-
-    if (compact) {
-      return Row(children: dots);
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: softGreenColor.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(radiusMedium),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                enabled ? AppIcons.avTimerRounded : AppIcons.timerOffOutlined,
-                size: 19,
-                color: enabled ? accentColor : mutedTextColor,
-              ),
-              const SizedBox(width: 7),
-              Text(
-                bpm > 0 ? '$bpm BPM · $beatsPerBar/4' : '$beatsPerBar/4',
-                style: const TextStyle(
-                  color: inkColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                subdivision == 1 ? '四分音符' : '$subdivision分细分',
-                style: const TextStyle(
-                  color: mutedTextColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(children: dots),
-          if (subdivision > 1) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                for (var i = 0; i < subdivision; i++)
-                  Expanded(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 110),
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      decoration: BoxDecoration(
-                        color: enabled && activeSubdivision == i
-                            ? accentColor
-                            : lineColor,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ],
       ),
     );
   }

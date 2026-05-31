@@ -271,6 +271,29 @@ List<String> extractLyricUnits(String text) {
   return result;
 }
 
+List<String> tokenizeNotationLine(String line) {
+  final tokens = <String>[];
+  final matches = RegExp(r'\||[^\s|]+').allMatches(line);
+  for (final match in matches) {
+    var raw = match.group(0)!.trim();
+    if (raw.isEmpty) continue;
+    if (raw == '|') {
+      tokens.add(raw);
+      continue;
+    }
+    raw = raw.replaceAll(RegExp(r'^:+|:+$'), '');
+    if (raw.isEmpty || RegExp(r'^\d+/\d+$').hasMatch(raw)) continue;
+    tokens.add(raw);
+  }
+  return tokens;
+}
+
+String mainJianpuToken(String raw) {
+  if (!raw.startsWith('@')) return raw;
+  final parts = raw.split('@').where((part) => part.isNotEmpty).toList();
+  return parts.isEmpty ? raw : parts.last;
+}
+
 String normalizeForumUrl(String path) {
   final text = cleanText(path);
   if (text.isEmpty) return '';

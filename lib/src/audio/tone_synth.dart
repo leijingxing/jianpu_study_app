@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 
 import 'instrument_backend.dart';
 import '../data/key_transpose.dart';
+import '../data/models.dart';
 
 class ToneSynth {
   ToneSynth() {
@@ -26,10 +27,11 @@ class ToneSynth {
     int program = MelodyInstrument.defaultProgram,
     double volume = 0.7,
   }) async {
-    final frequency = frequencyForJianpu(raw: raw, key: key);
+    final playableRaw = mainJianpuToken(raw);
+    final frequency = frequencyForJianpu(raw: playableRaw, key: key);
     if (frequency == null || volume <= 0) return;
 
-    final midi = midiNoteForJianpu(raw: raw, key: key);
+    final midi = midiNoteForJianpu(raw: playableRaw, key: key);
     if (midi != null) {
       final played = await _instrument.playMidiNote(
         midi: midi,

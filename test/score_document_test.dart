@@ -18,4 +18,11 @@ lyrics:
     expect(document.notation.single, contains('5,_'));
     expect(document.lyrics, ['', '', '鸳', '鸯', '双', '栖', '蝶']);
   });
+
+  test('tokenizes repeat markers and grace notes without fake notes', () {
+    final tokens = tokenizeNotationLine('|: 1 2 | @5@3-- :|');
+
+    expect(tokens, ['|', '1', '2', '|', '@5@3--', '|']);
+    expect(mainJianpuToken('@5@3--'), '3--');
+  });
 }
