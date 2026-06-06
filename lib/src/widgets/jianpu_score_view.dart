@@ -28,6 +28,7 @@ class JianpuScoreView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     final width = math.max(360.0, MediaQuery.sizeOf(context).width - 24);
     final displayKey = selectedKey ?? detail.selectedKey;
     final layout = _ScoreLayout.from(
@@ -47,6 +48,11 @@ class JianpuScoreView extends StatelessWidget {
         activeNoteIndex: activeNoteIndex,
         activePulse: activePulse,
         selectedKey: displayKey,
+        textColor: palette.text,
+        mutedColor: palette.textMuted,
+        lineColor: palette.text,
+        brandColor: palette.brand,
+        accentColor: palette.accent,
       ),
     );
   }
@@ -188,6 +194,11 @@ class _JianpuPainter extends CustomPainter {
     required this.activeNoteIndex,
     required this.activePulse,
     required this.selectedKey,
+    required this.textColor,
+    required this.mutedColor,
+    required this.lineColor,
+    required this.brandColor,
+    required this.accentColor,
   });
 
   final ScoreDocument document;
@@ -197,6 +208,11 @@ class _JianpuPainter extends CustomPainter {
   final int activeNoteIndex;
   final double activePulse;
   final String selectedKey;
+  final Color textColor;
+  final Color mutedColor;
+  final Color lineColor;
+  final Color brandColor;
+  final Color accentColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -204,7 +220,7 @@ class _JianpuPainter extends CustomPainter {
     canvas.scale(zoom);
     final width = size.width / zoom;
     final linePaint = Paint()
-      ..color = Colors.black
+      ..color = lineColor
       ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -224,6 +240,7 @@ class _JianpuPainter extends CustomPainter {
       detail.title.isNotEmpty ? detail.title : document.title,
       Offset(width / 2, 14),
       fontSize: 22,
+      color: textColor,
       weight: FontWeight.w800,
       align: TextAlign.center,
       anchor: _Anchor.topCenter,
@@ -233,6 +250,7 @@ class _JianpuPainter extends CustomPainter {
       '歌手:${detail.singer.isEmpty ? '-' : detail.singer}',
       Offset(width - 14, 22),
       fontSize: 12.5,
+      color: mutedColor,
       weight: FontWeight.w700,
       align: TextAlign.right,
       anchor: _Anchor.topRight,
@@ -242,6 +260,7 @@ class _JianpuPainter extends CustomPainter {
       '曲:${detail.composer.isEmpty ? document.composer : detail.composer}',
       Offset(width - 14, 52),
       fontSize: 12.5,
+      color: mutedColor,
       weight: FontWeight.w700,
       align: TextAlign.right,
       anchor: _Anchor.topRight,
@@ -251,6 +270,7 @@ class _JianpuPainter extends CustomPainter {
       '词:${detail.lyricist.isEmpty ? document.lyricist : detail.lyricist}',
       Offset(width - 14, 77),
       fontSize: 12.5,
+      color: mutedColor,
       weight: FontWeight.w700,
       align: TextAlign.right,
       anchor: _Anchor.topRight,
@@ -260,6 +280,7 @@ class _JianpuPainter extends CustomPainter {
       '节奏:',
       const Offset(14, 44),
       fontSize: 14,
+      color: textColor,
       weight: FontWeight.w700,
     );
     _drawFraction(canvas, detail.timeSignature, const Offset(55, 39));
@@ -268,6 +289,7 @@ class _JianpuPainter extends CustomPainter {
       '速度:${detail.bpm}',
       const Offset(14, 74),
       fontSize: 14,
+      color: textColor,
       weight: FontWeight.w700,
     );
     _paintText(
@@ -397,9 +419,7 @@ class _JianpuPainter extends CustomPainter {
       offset,
       fontSize: 18,
       weight: FontWeight.w800,
-      color: active
-          ? accentColor
-          : (note.isRest ? mutedTextColor : Colors.black),
+      color: active ? accentColor : (note.isRest ? mutedColor : textColor),
       anchor: _Anchor.topCenter,
       align: TextAlign.center,
     );
@@ -417,7 +437,7 @@ class _JianpuPainter extends CustomPainter {
       canvas.drawCircle(
         Offset(offset.dx + 10, offset.dy + 15),
         1.8,
-        Paint()..color = active ? accentColor : Colors.black,
+        Paint()..color = active ? accentColor : textColor,
       );
     }
 
@@ -425,14 +445,14 @@ class _JianpuPainter extends CustomPainter {
       canvas.drawCircle(
         Offset(offset.dx, offset.dy + 24 + i * 4),
         1.7,
-        Paint()..color = active ? accentColor : Colors.black,
+        Paint()..color = active ? accentColor : textColor,
       );
     }
     for (var i = 0; i < note.highDotCount; i++) {
       canvas.drawCircle(
         Offset(offset.dx, offset.dy - 4 - i * 4),
         1.7,
-        Paint()..color = active ? accentColor : Colors.black,
+        Paint()..color = active ? accentColor : textColor,
       );
     }
 
@@ -443,6 +463,7 @@ class _JianpuPainter extends CustomPainter {
         Offset(offset.dx, offset.dy + 37),
         fontSize: 13.5,
         weight: FontWeight.w700,
+        color: mutedColor,
         anchor: _Anchor.topCenter,
         align: TextAlign.center,
       );
@@ -519,7 +540,12 @@ class _JianpuPainter extends CustomPainter {
         oldDelegate.zoom != zoom ||
         oldDelegate.activeNoteIndex != activeNoteIndex ||
         oldDelegate.activePulse != activePulse ||
-        oldDelegate.selectedKey != selectedKey;
+        oldDelegate.selectedKey != selectedKey ||
+        oldDelegate.textColor != textColor ||
+        oldDelegate.mutedColor != mutedColor ||
+        oldDelegate.lineColor != lineColor ||
+        oldDelegate.brandColor != brandColor ||
+        oldDelegate.accentColor != accentColor;
   }
 }
 

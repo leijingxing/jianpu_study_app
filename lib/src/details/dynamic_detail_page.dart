@@ -178,18 +178,19 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     final subtitle = detail?.singer.isNotEmpty == true
         ? detail!.singer
         : '动态简谱';
+    final palette = paletteOf(context);
 
     return Scaffold(
-      backgroundColor: paperColor,
+      backgroundColor: palette.paper,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(62),
         child: SafeArea(
           bottom: false,
           child: Container(
             height: 62,
-            decoration: const BoxDecoration(
-              color: paperTintColor,
-              border: Border(bottom: BorderSide(color: lineColor)),
+            decoration: BoxDecoration(
+              color: palette.paper,
+              border: Border(bottom: BorderSide(color: palette.line)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -209,8 +210,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: inkColor,
+                        style: TextStyle(
+                          color: palette.text,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                           height: 1.1,
@@ -221,8 +222,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: mutedTextColor,
+                        style: TextStyle(
+                          color: palette.textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           height: 1.1,
@@ -255,7 +256,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                   icon: const Icon(AppIcons.tuneRounded, size: 25),
                   style: IconButton.styleFrom(
                     fixedSize: const Size(40, 40),
-                    foregroundColor: brandDarkColor,
+                    foregroundColor: palette.text,
                   ),
                 ),
               ],
@@ -295,6 +296,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
       );
     }
 
+    final palette = paletteOf(context);
     return Scrollbar(
       controller: _scrollController,
       child: SingleChildScrollView(
@@ -308,8 +310,8 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
             alignment: Alignment.topCenter,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: paperTintColor,
-                border: Border.all(color: lineColor),
+                color: palette.paperTint,
+                border: Border.all(color: palette.line),
                 borderRadius: BorderRadius.circular(radiusMedium),
               ),
               child: Padding(
@@ -410,7 +412,7 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: paletteOf(context).paperTint,
       showDragHandle: true,
       builder: (context) {
         return DraggableScrollableSheet(
@@ -432,11 +434,11 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                   children: [
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             '谱面设置',
                             style: TextStyle(
-                              color: inkColor,
+                              color: paletteOf(context).text,
                               fontSize: 19,
                               fontWeight: FontWeight.w900,
                             ),
@@ -624,14 +626,15 @@ class _ReaderControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return SafeArea(
       top: false,
       child: Container(
         height: 72,
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        decoration: const BoxDecoration(
-          color: paperTintColor,
-          border: Border(top: BorderSide(color: lineColor)),
+        decoration: BoxDecoration(
+          color: palette.paperTint,
+          border: Border(top: BorderSide(color: palette.line)),
         ),
         child: Row(
           children: [
@@ -639,7 +642,7 @@ class _ReaderControls extends StatelessWidget {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
               decoration: BoxDecoration(
-                color: playing ? accentColor : brandColor,
+                color: playing ? palette.accent : palette.brand,
                 borderRadius: BorderRadius.circular(radiusMedium),
               ),
               child: IconButton(
@@ -650,7 +653,7 @@ class _ReaderControls extends StatelessWidget {
                   child: Icon(
                     playing ? AppIcons.pauseRounded : AppIcons.playArrowRounded,
                     key: ValueKey(playing),
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
               ),
@@ -662,7 +665,7 @@ class _ReaderControls extends StatelessWidget {
                 soundEnabled
                     ? AppIcons.volumeUpRounded
                     : AppIcons.volumeOffRounded,
-                color: soundEnabled ? brandColor : mutedTextColor,
+                color: soundEnabled ? palette.brand : palette.textMuted,
               ),
             ),
             const SizedBox(width: 2),
@@ -670,21 +673,21 @@ class _ReaderControls extends StatelessWidget {
               height: 34,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                color: softGreenColor,
+                color: palette.soft,
                 borderRadius: BorderRadius.circular(radiusMedium),
               ),
               alignment: Alignment.center,
               child: Text(
                 selectedKey.isEmpty ? '1=-' : '1=$selectedKey',
-                style: const TextStyle(
-                  color: brandDarkColor,
+                style: TextStyle(
+                  color: palette.brandDark,
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(AppIcons.speedRounded, size: 18, color: mutedTextColor),
+            Icon(AppIcons.speedRounded, size: 18, color: palette.textMuted),
             Expanded(
               child: Slider(
                 min: 0,
@@ -698,7 +701,7 @@ class _ReaderControls extends StatelessWidget {
             IconButton(
               tooltip: '设置',
               onPressed: onSettings,
-              icon: const Icon(AppIcons.tuneRounded, color: brandDarkColor),
+              icon: Icon(AppIcons.tuneRounded, color: palette.text),
             ),
           ],
         ),
@@ -723,10 +726,10 @@ class _ToolbarButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, color: brandDarkColor, size: 27),
+      icon: Icon(icon, color: paletteOf(context).text, size: 27),
       style: IconButton.styleFrom(
         fixedSize: const Size(40, 40),
-        foregroundColor: brandDarkColor,
+        foregroundColor: paletteOf(context).text,
       ),
     );
   }
@@ -749,8 +752,8 @@ class _SettingsSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
       decoration: BoxDecoration(
-        color: paperTintColor,
-        border: Border.all(color: lineColor),
+        color: paletteOf(context).paperTint,
+        border: Border.all(color: paletteOf(context).line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -758,12 +761,12 @@ class _SettingsSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: brandColor, size: 20),
+              Icon(icon, color: paletteOf(context).brand, size: 20),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
-                  color: inkColor,
+                style: TextStyle(
+                  color: paletteOf(context).text,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -786,15 +789,16 @@ class _KeySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '选调',
             style: TextStyle(
-              color: mutedTextColor,
+              color: palette.textMuted,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -865,14 +869,15 @@ class _SettingSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Row(
       children: [
         SizedBox(
           width: 76,
           child: Text(
             label,
-            style: const TextStyle(
-              color: mutedTextColor,
+            style: TextStyle(
+              color: palette.textMuted,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),

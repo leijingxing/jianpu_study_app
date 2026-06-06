@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../data/app_settings.dart';
-
-const brandColor = Color(0xFF2F7D76);
-const brandDarkColor = Color(0xFF1F4D4A);
-const inkColor = Color(0xFF17212B);
-const paperColor = Color(0xFFF7F3EA);
-const paperTintColor = Color(0xFFFFFBF3);
-const accentColor = Color(0xFFE36F4C);
-const amberColor = Color(0xFFE2A84B);
-const mutedTextColor = Color(0xFF69747C);
-const lineColor = Color(0xFFE5DED1);
-const softGreenColor = Color(0xFFE7F1EC);
+const brandColor = Color(0xFF246BFE);
+const brandDarkColor = Color(0xFF1745A8);
+const inkColor = Color(0xFF161B22);
+const paperColor = Color(0xFFF5F7FB);
+const paperTintColor = Color(0xFFFFFFFF);
+const accentColor = Color(0xFFE0593E);
+const amberColor = Color(0xFFE0A12B);
+const mutedTextColor = Color(0xFF687385);
+const lineColor = Color(0xFFE1E6EF);
+const softGreenColor = Color(0xFFEAF1FF);
 const radiusSmall = 6.0;
 const radiusMedium = 8.0;
 
@@ -24,6 +22,13 @@ class QingpuPalette extends ThemeExtension<QingpuPalette> {
     required this.accent,
     required this.amber,
     required this.soft,
+    required this.text,
+    required this.textMuted,
+    required this.line,
+    required this.surfaceAlt,
+    required this.success,
+    required this.danger,
+    required this.shadow,
   });
 
   final Color brand;
@@ -33,6 +38,13 @@ class QingpuPalette extends ThemeExtension<QingpuPalette> {
   final Color accent;
   final Color amber;
   final Color soft;
+  final Color text;
+  final Color textMuted;
+  final Color line;
+  final Color surfaceAlt;
+  final Color success;
+  final Color danger;
+  final Color shadow;
 
   @override
   QingpuPalette copyWith({
@@ -43,6 +55,13 @@ class QingpuPalette extends ThemeExtension<QingpuPalette> {
     Color? accent,
     Color? amber,
     Color? soft,
+    Color? text,
+    Color? textMuted,
+    Color? line,
+    Color? surfaceAlt,
+    Color? success,
+    Color? danger,
+    Color? shadow,
   }) {
     return QingpuPalette(
       brand: brand ?? this.brand,
@@ -52,6 +71,13 @@ class QingpuPalette extends ThemeExtension<QingpuPalette> {
       accent: accent ?? this.accent,
       amber: amber ?? this.amber,
       soft: soft ?? this.soft,
+      text: text ?? this.text,
+      textMuted: textMuted ?? this.textMuted,
+      line: line ?? this.line,
+      surfaceAlt: surfaceAlt ?? this.surfaceAlt,
+      success: success ?? this.success,
+      danger: danger ?? this.danger,
+      shadow: shadow ?? this.shadow,
     );
   }
 
@@ -66,6 +92,13 @@ class QingpuPalette extends ThemeExtension<QingpuPalette> {
       accent: Color.lerp(accent, other.accent, t)!,
       amber: Color.lerp(amber, other.amber, t)!,
       soft: Color.lerp(soft, other.soft, t)!,
+      text: Color.lerp(text, other.text, t)!,
+      textMuted: Color.lerp(textMuted, other.textMuted, t)!,
+      line: Color.lerp(line, other.line, t)!,
+      surfaceAlt: Color.lerp(surfaceAlt, other.surfaceAlt, t)!,
+      success: Color.lerp(success, other.success, t)!,
+      danger: Color.lerp(danger, other.danger, t)!,
+      shadow: Color.lerp(shadow, other.shadow, t)!,
     );
   }
 }
@@ -73,84 +106,165 @@ class QingpuPalette extends ThemeExtension<QingpuPalette> {
 QingpuPalette paletteOf(BuildContext context) =>
     Theme.of(context).extension<QingpuPalette>()!;
 
-QingpuPalette _paletteFor(AppUiStyle style) {
-  return switch (style) {
-    AppUiStyle.warm => const QingpuPalette(
-      brand: brandColor,
-      brandDark: brandDarkColor,
-      paper: paperColor,
-      paperTint: paperTintColor,
-      accent: accentColor,
-      amber: amberColor,
-      soft: softGreenColor,
+QingpuPalette _paletteFor(Brightness brightness) {
+  return switch (brightness) {
+    Brightness.light => const QingpuPalette(
+      brand: Color(0xFF246BFE),
+      brandDark: Color(0xFF1745A8),
+      paper: Color(0xFFF5F7FB),
+      paperTint: Color(0xFFFFFFFF),
+      accent: Color(0xFFE0593E),
+      amber: Color(0xFFE0A12B),
+      soft: Color(0xFFEAF1FF),
+      text: Color(0xFF161B22),
+      textMuted: Color(0xFF687385),
+      line: Color(0xFFE1E6EF),
+      surfaceAlt: Color(0xFFF0F3F8),
+      success: Color(0xFF15946A),
+      danger: Color(0xFFD33F49),
+      shadow: Color(0x1A111827),
     ),
-    AppUiStyle.fresh => const QingpuPalette(
-      brand: Color(0xFF277A8C),
-      brandDark: Color(0xFF174E59),
-      paper: Color(0xFFF1F7F5),
-      paperTint: Color(0xFFFCFFFC),
-      accent: Color(0xFFE66E52),
-      amber: Color(0xFFE7B34E),
-      soft: Color(0xFFE3F1F2),
-    ),
-    AppUiStyle.focus => const QingpuPalette(
-      brand: Color(0xFF4E6570),
-      brandDark: Color(0xFF24343B),
-      paper: Color(0xFFF1EEE8),
-      paperTint: Color(0xFFFFFCF5),
-      accent: Color(0xFFC76145),
-      amber: Color(0xFFD59B3E),
-      soft: Color(0xFFE8ECEB),
+    Brightness.dark => const QingpuPalette(
+      brand: Color(0xFF7DA2FF),
+      brandDark: Color(0xFFC7D6FF),
+      paper: Color(0xFF0F141B),
+      paperTint: Color(0xFF171D26),
+      accent: Color(0xFFFF8A6F),
+      amber: Color(0xFFF4BE57),
+      soft: Color(0xFF202B3A),
+      text: Color(0xFFEAF0F8),
+      textMuted: Color(0xFF9BA8BA),
+      line: Color(0xFF293241),
+      surfaceAlt: Color(0xFF111821),
+      success: Color(0xFF4FC79A),
+      danger: Color(0xFFFF6B78),
+      shadow: Color(0x66000000),
     ),
   };
 }
 
-ThemeData buildAppTheme({AppUiStyle style = AppUiStyle.warm}) {
-  final palette = _paletteFor(style);
-  return ThemeData(
+ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
+  final palette = _paletteFor(brightness);
+  final scheme = ColorScheme.fromSeed(
+    seedColor: palette.brand,
+    brightness: brightness,
+    primary: palette.brand,
+    secondary: palette.accent,
+    tertiary: palette.amber,
+    surface: palette.paperTint,
+    onSurface: palette.text,
+  );
+  final isDark = brightness == Brightness.dark;
+  final base = ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: palette.brand,
-      primary: palette.brand,
-      secondary: palette.accent,
-      tertiary: palette.amber,
-      surface: palette.paperTint,
-      onSurface: inkColor,
-    ),
+    brightness: brightness,
+    colorScheme: scheme,
+    fontFamilyFallback: const [
+      'PingFang SC',
+      'Microsoft YaHei',
+      'Noto Sans CJK SC',
+      'Roboto',
+    ],
+  );
+
+  return base.copyWith(
     extensions: [palette],
     scaffoldBackgroundColor: palette.paper,
+    textTheme: base.textTheme.apply(
+      bodyColor: palette.text,
+      displayColor: palette.text,
+    ),
     appBarTheme: AppBarTheme(
       centerTitle: false,
       elevation: 0,
       scrolledUnderElevation: 0,
-      backgroundColor: palette.paperTint,
-      foregroundColor: inkColor,
-    ),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      color: palette.paperTint,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(radiusMedium),
-        side: const BorderSide(color: lineColor),
+      backgroundColor: palette.paper,
+      foregroundColor: palette.text,
+      titleTextStyle: TextStyle(
+        color: palette.text,
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+        height: 1.1,
       ),
     ),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      type: BottomNavigationBarType.fixed,
+      elevation: 0,
+      backgroundColor: palette.paperTint,
+      selectedItemColor: palette.brand,
+      unselectedItemColor: palette.textMuted,
+      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800),
+      unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      elevation: 0,
+      height: 66,
+      backgroundColor: palette.paperTint,
+      indicatorColor: palette.soft,
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          color: states.contains(WidgetState.selected)
+              ? palette.brand
+              : palette.textMuted,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? palette.brand
+              : palette.textMuted,
+        ),
+      ),
+    ),
+    cardTheme: CardThemeData(
+      elevation: isDark ? 0 : 1,
+      shadowColor: palette.shadow,
+      color: palette.paperTint,
+      margin: EdgeInsets.zero,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusMedium),
+        side: BorderSide(color: palette.line),
+      ),
+    ),
+    dividerTheme: DividerThemeData(color: palette.line, thickness: 1),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: palette.paperTint,
+      labelStyle: TextStyle(color: palette.textMuted),
+      hintStyle: TextStyle(color: palette.textMuted),
+      prefixIconColor: palette.textMuted,
+      suffixIconColor: palette.textMuted,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(radiusMedium),
-        borderSide: const BorderSide(color: lineColor),
+        borderSide: BorderSide(color: palette.line),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(radiusMedium),
-        borderSide: const BorderSide(color: lineColor, width: 1.2),
+        borderSide: BorderSide(color: palette.line, width: 1.1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(radiusMedium),
         borderSide: BorderSide(color: palette.brand, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    ),
+    chipTheme: base.chipTheme.copyWith(
+      backgroundColor: palette.surfaceAlt,
+      selectedColor: palette.soft,
+      disabledColor: palette.surfaceAlt.withValues(alpha: 0.6),
+      checkmarkColor: palette.brand,
+      labelStyle: TextStyle(color: palette.text, fontWeight: FontWeight.w700),
+      secondaryLabelStyle: TextStyle(
+        color: palette.brandDark,
+        fontWeight: FontWeight.w800,
+      ),
+      side: BorderSide(color: palette.line),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radiusMedium),
+      ),
     ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
@@ -163,9 +277,9 @@ ThemeData buildAppTheme({AppUiStyle style = AppUiStyle.warm}) {
         foregroundColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? palette.brandDark
-              : mutedTextColor,
+              : palette.textMuted,
         ),
-        side: WidgetStateProperty.all(const BorderSide(color: lineColor)),
+        side: WidgetStateProperty.all(BorderSide(color: palette.line)),
         shape: WidgetStateProperty.all(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
@@ -175,17 +289,50 @@ ThemeData buildAppTheme({AppUiStyle style = AppUiStyle.warm}) {
     ),
     sliderTheme: SliderThemeData(
       activeTrackColor: palette.brand,
-      inactiveTrackColor: lineColor,
+      inactiveTrackColor: palette.line,
       thumbColor: palette.brand,
       overlayColor: palette.brand.withValues(alpha: 0.12),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        foregroundColor: palette.text,
+        disabledForegroundColor: palette.textMuted.withValues(alpha: 0.5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusMedium),
+        ),
+      ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: palette.brand,
-        foregroundColor: Colors.white,
+        foregroundColor: isDark ? const Color(0xFF08111F) : Colors.white,
+        disabledBackgroundColor: palette.line,
+        disabledForegroundColor: palette.textMuted,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
+        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: palette.text,
+        side: BorderSide(color: palette.line),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusMedium),
+        ),
+        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) =>
+            states.contains(WidgetState.selected) ? palette.brand : null,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? palette.brand.withValues(alpha: 0.28)
+            : palette.line,
       ),
     ),
   );

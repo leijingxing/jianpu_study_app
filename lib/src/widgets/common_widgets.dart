@@ -18,6 +18,7 @@ class StateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -28,27 +29,27 @@ class StateView extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: softGreenColor,
+                color: palette.soft,
                 borderRadius: BorderRadius.circular(radiusMedium),
-                border: Border.all(color: lineColor),
+                border: Border.all(color: palette.line),
               ),
-              child: Icon(icon, size: 34, color: brandColor),
+              child: Icon(icon, size: 34, color: palette.brand),
             ),
             const SizedBox(height: 14),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
-                color: inkColor,
+                color: palette.text,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: mutedTextColor, height: 1.35),
+              style: TextStyle(color: palette.textMuted, height: 1.35),
             ),
             if (action != null) ...[const SizedBox(height: 18), action!],
           ],
@@ -104,7 +105,10 @@ class LoadMoreIndicator extends StatelessWidget {
             ? const CircularProgressIndicator()
             : Text(
                 hasMore ? '继续加载' : '没有更多谱子了',
-                style: const TextStyle(color: mutedTextColor, fontSize: 13),
+                style: TextStyle(
+                  color: paletteOf(context).textMuted,
+                  fontSize: 13,
+                ),
               ),
       ),
     );

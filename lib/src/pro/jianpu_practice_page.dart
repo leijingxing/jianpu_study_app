@@ -270,7 +270,7 @@ class _PracticeHeader extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: palette.paperTint,
-        border: Border.all(color: lineColor),
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -297,8 +297,8 @@ class _PracticeHeader extends StatelessWidget {
                   children: [
                     Text(
                       lesson.sourceLabel,
-                      style: const TextStyle(
-                        color: mutedTextColor,
+                      style: TextStyle(
+                        color: palette.textMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                       ),
@@ -308,8 +308,8 @@ class _PracticeHeader extends StatelessWidget {
                       '第 ${phraseIndex + 1} 句 · ${phrase.focus}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: inkColor,
+                      style: TextStyle(
+                        color: palette.text,
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                       ),
@@ -326,15 +326,15 @@ class _PracticeHeader extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 7,
               value: progress,
-              backgroundColor: lineColor,
+              backgroundColor: palette.line,
               valueColor: AlwaysStoppedAnimation<Color>(palette.brand),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             '${lesson.phraseCount} 个乐句 · ${lesson.totalBeats.toStringAsFixed(1)} 拍 · 1=${lesson.key}',
-            style: const TextStyle(
-              color: mutedTextColor,
+            style: TextStyle(
+              color: palette.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -352,11 +352,12 @@ class _MeterBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Container(
       constraints: const BoxConstraints(maxWidth: 116),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: softGreenColor,
+        color: palette.soft,
         borderRadius: BorderRadius.circular(radiusSmall),
       ),
       child: Text(
@@ -364,8 +365,8 @@ class _MeterBadge extends StatelessWidget {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: brandDarkColor,
+        style: TextStyle(
+          color: palette.brandDark,
           fontSize: 12,
           fontWeight: FontWeight.w900,
           height: 1.12,
@@ -412,12 +413,13 @@ class _PhraseStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
       decoration: BoxDecoration(
-        color: paperTintColor,
-        border: Border.all(color: lineColor),
+        color: palette.paperTint,
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -425,13 +427,13 @@ class _PhraseStage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(_iconForMode(mode), color: brandColor, size: 20),
+              Icon(_iconForMode(mode), color: palette.brand, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   mode.description,
-                  style: const TextStyle(
-                    color: inkColor,
+                  style: TextStyle(
+                    color: palette.text,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
                   ),
@@ -442,8 +444,8 @@ class _PhraseStage extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             phrase.rhythm,
-            style: const TextStyle(
-              color: mutedTextColor,
+            style: TextStyle(
+              color: palette.textMuted,
               fontSize: 13,
               fontWeight: FontWeight.w800,
             ),
@@ -488,6 +490,7 @@ class _PracticeNoteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     final main = switch (mode) {
       PracticeMode.listen => note.display,
       PracticeMode.rhythm => note.beatText,
@@ -506,9 +509,9 @@ class _PracticeNoteTile extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 68),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
       decoration: BoxDecoration(
-        color: active ? accentColor : softGreenColor.withValues(alpha: 0.72),
+        color: active ? palette.accent : palette.soft,
         borderRadius: BorderRadius.circular(radiusMedium),
-        border: Border.all(color: active ? accentColor : lineColor),
+        border: Border.all(color: active ? palette.accent : palette.line),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -518,7 +521,9 @@ class _PracticeNoteTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: active ? Colors.white : inkColor,
+              color: active
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : palette.text,
               fontSize: 20,
               fontWeight: FontWeight.w900,
               height: 1,
@@ -530,7 +535,9 @@ class _PracticeNoteTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: active ? Colors.white : mutedTextColor,
+              color: active
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : palette.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
@@ -554,6 +561,7 @@ class _LineLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -561,8 +569,8 @@ class _LineLabel extends StatelessWidget {
           width: 68,
           child: Text(
             label,
-            style: const TextStyle(
-              color: mutedTextColor,
+            style: TextStyle(
+              color: palette.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
@@ -572,7 +580,7 @@ class _LineLabel extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              color: muted ? mutedTextColor : brandDarkColor,
+              color: muted ? palette.textMuted : palette.brandDark,
               fontSize: muted ? 13 : 16,
               height: 1.28,
               fontWeight: FontWeight.w900,
@@ -611,11 +619,12 @@ class _TransportPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       decoration: BoxDecoration(
-        color: paperTintColor,
-        border: Border.all(color: lineColor),
+        color: palette.paperTint,
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -655,8 +664,8 @@ class _TransportPanel extends StatelessWidget {
             children: [
               Text(
                 '$bpm BPM',
-                style: const TextStyle(
-                  color: brandDarkColor,
+                style: TextStyle(
+                  color: palette.brandDark,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -691,20 +700,21 @@ class _PhraseNavigator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: paperTintColor,
-        border: Border.all(color: lineColor),
+        color: palette.paperTint,
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '乐句列表',
             style: TextStyle(
-              color: inkColor,
+              color: palette.text,
               fontSize: 15,
               fontWeight: FontWeight.w900,
             ),
@@ -765,6 +775,7 @@ class _NextActionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     final label = switch (mode) {
       PracticeMode.listen => '下一步：读拍',
       PracticeMode.rhythm => '下一步：唱谱',
@@ -774,8 +785,8 @@ class _NextActionPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: softGreenColor.withValues(alpha: 0.62),
-        border: Border.all(color: lineColor),
+        color: palette.soft,
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Row(
@@ -783,8 +794,8 @@ class _NextActionPanel extends StatelessWidget {
           Expanded(
             child: Text(
               phrase.tip,
-              style: const TextStyle(
-                color: inkColor,
+              style: TextStyle(
+                color: palette.text,
                 fontSize: 13,
                 height: 1.35,
                 fontWeight: FontWeight.w700,
@@ -818,12 +829,13 @@ class _SymbolPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     final topic = practiceSymbolTopics[selectedIndex];
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
       decoration: BoxDecoration(
-        color: paperTintColor,
-        border: Border.all(color: lineColor),
+        color: palette.paperTint,
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -857,7 +869,7 @@ class _SymbolPanel extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: softGreenColor.withValues(alpha: 0.65),
+                color: palette.soft,
                 borderRadius: BorderRadius.circular(radiusMedium),
               ),
               child: Column(
@@ -865,8 +877,8 @@ class _SymbolPanel extends StatelessWidget {
                 children: [
                   Text(
                     '${topic.symbol}  ${topic.title}',
-                    style: const TextStyle(
-                      color: brandDarkColor,
+                    style: TextStyle(
+                      color: palette.brandDark,
                       fontSize: 17,
                       fontWeight: FontWeight.w900,
                     ),
@@ -874,8 +886,8 @@ class _SymbolPanel extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     topic.explanation,
-                    style: const TextStyle(
-                      color: inkColor,
+                    style: TextStyle(
+                      color: palette.text,
                       fontSize: 14,
                       height: 1.4,
                       fontWeight: FontWeight.w600,
@@ -884,8 +896,8 @@ class _SymbolPanel extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '练法：${topic.practice}',
-                    style: const TextStyle(
-                      color: mutedTextColor,
+                    style: TextStyle(
+                      color: palette.textMuted,
                       fontSize: 13,
                       height: 1.35,
                     ),

@@ -66,10 +66,11 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
   @override
   Widget build(BuildContext context) {
     final favorite = widget.favorites.contains(ScoreKind.image, widget.item.id);
+    final palette = paletteOf(context);
     return Scaffold(
-      backgroundColor: paperColor,
+      backgroundColor: palette.paper,
       appBar: AppBar(
-        backgroundColor: paperTintColor,
+        backgroundColor: palette.paper,
         title: Text(
           widget.item.title,
           maxLines: 1,
@@ -113,22 +114,23 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
     }
 
     final detail = _detail!;
+    final palette = paletteOf(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
       children: [
         Text(
           widget.item.title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w900,
-            color: inkColor,
+            color: palette.text,
             height: 1.08,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           widget.item.summary.isEmpty ? '图片谱' : widget.item.summary,
-          style: const TextStyle(color: mutedTextColor, height: 1.35),
+          style: TextStyle(color: palette.textMuted, height: 1.35),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -136,17 +138,17 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
           runSpacing: 8,
           children: [
             if (widget.item.views > 0)
-              InfoPill(label: '${widget.item.views} 浏览', color: brandColor),
-            InfoPill(label: widget.item.date, color: const Color(0xFF7C6E5E)),
+              InfoPill(label: '${widget.item.views} 浏览', color: palette.brand),
+            InfoPill(label: widget.item.date, color: palette.amber),
             if (detail.videoUrls.isNotEmpty)
               InfoPill(
                 label: '${detail.videoUrls.length} 个视频',
-                color: accentColor,
+                color: palette.accent,
               ),
             if (detail.imageUrls.isNotEmpty)
               InfoPill(
                 label: '${detail.imageUrls.length} 张图片',
-                color: inkColor,
+                color: palette.text,
               ),
           ],
         ),
@@ -271,12 +273,13 @@ class _ScoreVideoState extends State<_ScoreVideo> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(radiusMedium),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.black,
-          border: Border.all(color: lineColor),
+          border: Border.all(color: palette.line),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: FutureBuilder<void>(
@@ -343,8 +346,8 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                   controller,
                   allowScrubbing: true,
                   padding: EdgeInsets.zero,
-                  colors: const VideoProgressColors(
-                    playedColor: accentColor,
+                  colors: VideoProgressColors(
+                    playedColor: palette.accent,
                     bufferedColor: Color(0x88FFFFFF),
                     backgroundColor: Color(0x33FFFFFF),
                   ),
@@ -516,12 +519,13 @@ class _ScoreImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(radiusMedium),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: paperTintColor,
-          border: Border.all(color: lineColor),
+          color: palette.paperTint,
+          border: Border.all(color: palette.line),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: InteractiveViewer(

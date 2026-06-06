@@ -13,8 +13,19 @@ enum AppUiStyle {
   final String label;
 }
 
+enum AppThemeMode {
+  system('跟随系统'),
+  light('亮色'),
+  dark('暗色');
+
+  const AppThemeMode(this.label);
+
+  final String label;
+}
+
 class AppSettings extends ChangeNotifier {
   static const _uiStyleKey = 'settings_ui_style_v1';
+  static const _themeModeKey = 'settings_theme_mode_v1';
   static const _compactListKey = 'settings_compact_list_v1';
   static const _reduceMotionKey = 'settings_reduce_motion_v1';
   static const _defaultSoundKey = 'settings_default_sound_v1';
@@ -22,6 +33,7 @@ class AppSettings extends ChangeNotifier {
   static const _melodyInstrumentKey = 'settings_melody_instrument_v1';
 
   var _uiStyle = AppUiStyle.warm;
+  var _themeMode = AppThemeMode.system;
   var _compactList = false;
   var _reduceMotion = false;
   var _defaultSoundEnabled = true;
@@ -29,6 +41,7 @@ class AppSettings extends ChangeNotifier {
   var _melodyInstrumentProgram = MelodyInstrument.defaultProgram;
 
   AppUiStyle get uiStyle => _uiStyle;
+  AppThemeMode get themeMode => _themeMode;
   bool get compactList => _compactList;
   bool get reduceMotion => _reduceMotion;
   bool get defaultSoundEnabled => _defaultSoundEnabled;
@@ -40,6 +53,10 @@ class AppSettings extends ChangeNotifier {
     _uiStyle = AppUiStyle.values.firstWhere(
       (style) => style.name == prefs.getString(_uiStyleKey),
       orElse: () => AppUiStyle.warm,
+    );
+    _themeMode = AppThemeMode.values.firstWhere(
+      (mode) => mode.name == prefs.getString(_themeModeKey),
+      orElse: () => AppThemeMode.system,
     );
     _compactList = prefs.getBool(_compactListKey) ?? false;
     _reduceMotion = prefs.getBool(_reduceMotionKey) ?? false;
@@ -57,6 +74,14 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_uiStyleKey, value.name);
+  }
+
+  Future<void> setThemeMode(AppThemeMode value) async {
+    if (_themeMode == value) return;
+    _themeMode = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeModeKey, value.name);
   }
 
   Future<void> setCompactList(bool value) async {
@@ -102,6 +127,7 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> reset() async {
     _uiStyle = AppUiStyle.warm;
+    _themeMode = AppThemeMode.system;
     _compactList = false;
     _reduceMotion = false;
     _defaultSoundEnabled = true;
@@ -110,6 +136,7 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_uiStyleKey);
+    await prefs.remove(_themeModeKey);
     await prefs.remove(_compactListKey);
     await prefs.remove(_reduceMotionKey);
     await prefs.remove(_defaultSoundKey);

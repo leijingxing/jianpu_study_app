@@ -4,6 +4,7 @@ import 'data/app_settings.dart';
 import 'home/home_page.dart';
 import 'pro/jianpu_practice_page.dart';
 import 'pro/metronome_page.dart';
+import 'pro/scale_lab_page.dart';
 import 'theme/app_theme.dart';
 
 class JianpuStudyApp extends StatefulWidget {
@@ -36,15 +37,26 @@ class _JianpuStudyAppState extends State<JianpuStudyApp> {
         return MaterialApp(
           title: '轻谱',
           debugShowCheckedModeBanner: false,
-          theme: buildAppTheme(style: _settings.uiStyle),
+          theme: buildAppTheme(brightness: Brightness.light),
+          darkTheme: buildAppTheme(brightness: Brightness.dark),
+          themeMode: _themeModeOf(_settings.themeMode),
           home: HomePage(settings: _settings),
           routes: {
             JianpuPracticePage.routeName: (_) =>
                 JianpuPracticePage(settings: _settings),
             MetronomePage.routeName: (_) => const MetronomePage(),
+            ScaleLabPage.routeName: (_) => ScaleLabPage(settings: _settings),
           },
         );
       },
     );
+  }
+
+  ThemeMode _themeModeOf(AppThemeMode mode) {
+    return switch (mode) {
+      AppThemeMode.system => ThemeMode.system,
+      AppThemeMode.light => ThemeMode.light,
+      AppThemeMode.dark => ThemeMode.dark,
+    };
   }
 }

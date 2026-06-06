@@ -499,7 +499,7 @@ class _MetronomeDeck extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
       decoration: BoxDecoration(
         color: palette.paperTint,
-        border: Border.all(color: lineColor),
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -546,6 +546,12 @@ class _MetronomeDeck extends StatelessWidget {
                     subdivision: subdivision,
                     accents: accents,
                     playing: playing,
+                    lineColor: palette.line,
+                    textColor: palette.text,
+                    accentColor: palette.accent,
+                    brandColor: palette.brand,
+                    amberColor: palette.amber,
+                    mutedColor: palette.textMuted,
                   ),
                 ),
                 Column(
@@ -553,18 +559,18 @@ class _MetronomeDeck extends StatelessWidget {
                   children: [
                     Text(
                       '$bpm',
-                      style: const TextStyle(
-                        color: inkColor,
+                      style: TextStyle(
+                        color: palette.text,
                         fontSize: 68,
                         height: 0.9,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 5),
-                    const Text(
+                    Text(
                       'BPM',
                       style: TextStyle(
-                        color: mutedTextColor,
+                        color: palette.textMuted,
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                       ),
@@ -655,6 +661,12 @@ class _MetronomeRingPainter extends CustomPainter {
     required this.subdivision,
     required this.accents,
     required this.playing,
+    required this.lineColor,
+    required this.textColor,
+    required this.accentColor,
+    required this.brandColor,
+    required this.amberColor,
+    required this.mutedColor,
   });
 
   final int beatsPerBar;
@@ -663,6 +675,12 @@ class _MetronomeRingPainter extends CustomPainter {
   final int subdivision;
   final List<_BeatAccent> accents;
   final bool playing;
+  final Color lineColor;
+  final Color textColor;
+  final Color accentColor;
+  final Color brandColor;
+  final Color amberColor;
+  final Color mutedColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -684,7 +702,7 @@ class _MetronomeRingPainter extends CustomPainter {
         _BeatAccent.strong => accentColor,
         _BeatAccent.normal => brandColor,
         _BeatAccent.soft => amberColor,
-        _BeatAccent.mute => mutedTextColor,
+        _BeatAccent.mute => mutedColor,
       };
       final paint = Paint()
         ..color = active ? color : color.withValues(alpha: 0.3);
@@ -705,7 +723,7 @@ class _MetronomeRingPainter extends CustomPainter {
         center + Offset(math.cos(angle), math.sin(angle)) * (radius - 20),
         handPaint,
       );
-      canvas.drawCircle(center, 5, Paint()..color = inkColor);
+      canvas.drawCircle(center, 5, Paint()..color = textColor);
     }
   }
 
@@ -716,7 +734,13 @@ class _MetronomeRingPainter extends CustomPainter {
         activeSubdivision != oldDelegate.activeSubdivision ||
         subdivision != oldDelegate.subdivision ||
         accents != oldDelegate.accents ||
-        playing != oldDelegate.playing;
+        playing != oldDelegate.playing ||
+        lineColor != oldDelegate.lineColor ||
+        textColor != oldDelegate.textColor ||
+        accentColor != oldDelegate.accentColor ||
+        brandColor != oldDelegate.brandColor ||
+        amberColor != oldDelegate.amberColor ||
+        mutedColor != oldDelegate.mutedColor;
   }
 }
 
@@ -759,7 +783,7 @@ class _Panel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
         color: palette.paperTint,
-        border: Border.all(color: lineColor),
+        border: Border.all(color: palette.line),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -771,8 +795,8 @@ class _Panel extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
-                  color: inkColor,
+                style: TextStyle(
+                  color: palette.text,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -843,6 +867,7 @@ class _NumberStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Row(
       children: [
         _ControlLabel(label),
@@ -855,8 +880,8 @@ class _NumberStepper extends StatelessWidget {
           child: Center(
             child: Text(
               value,
-              style: const TextStyle(
-                color: inkColor,
+              style: TextStyle(
+                color: palette.text,
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
               ),
@@ -894,6 +919,7 @@ class _LabeledSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Row(
       children: [
         _ControlLabel(label),
@@ -912,8 +938,8 @@ class _LabeledSlider extends StatelessWidget {
           child: Text(
             text,
             textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: mutedTextColor,
+            style: TextStyle(
+              color: palette.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
@@ -931,12 +957,13 @@ class _ControlLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return SizedBox(
       width: 76,
       child: Text(
         text,
-        style: const TextStyle(
-          color: mutedTextColor,
+        style: TextStyle(
+          color: palette.textMuted,
           fontSize: 13,
           fontWeight: FontWeight.w700,
         ),
@@ -960,11 +987,12 @@ class _AccentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     final color = switch (accent) {
-      _BeatAccent.strong => accentColor,
-      _BeatAccent.normal => brandColor,
-      _BeatAccent.soft => amberColor,
-      _BeatAccent.mute => mutedTextColor,
+      _BeatAccent.strong => palette.accent,
+      _BeatAccent.normal => palette.brand,
+      _BeatAccent.soft => palette.amber,
+      _BeatAccent.mute => palette.textMuted,
     };
     final label = switch (accent) {
       _BeatAccent.strong => '强',
@@ -986,7 +1014,7 @@ class _AccentButton extends StatelessWidget {
         child: Text(
           '${index + 1}$label',
           style: TextStyle(
-            color: active ? Colors.white : color,
+            color: active ? Theme.of(context).colorScheme.onPrimary : color,
             fontSize: 12,
             fontWeight: FontWeight.w900,
           ),
@@ -999,15 +1027,16 @@ class _AccentButton extends StatelessWidget {
 class _AccentLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final palette = paletteOf(context);
+    return Row(
       children: [
-        _LegendDot(color: accentColor, text: '强'),
-        SizedBox(width: 10),
-        _LegendDot(color: brandColor, text: '中'),
-        SizedBox(width: 10),
-        _LegendDot(color: amberColor, text: '弱'),
-        SizedBox(width: 10),
-        _LegendDot(color: mutedTextColor, text: '静音'),
+        _LegendDot(color: palette.accent, text: '强'),
+        const SizedBox(width: 10),
+        _LegendDot(color: palette.brand, text: '中'),
+        const SizedBox(width: 10),
+        _LegendDot(color: palette.amber, text: '弱'),
+        const SizedBox(width: 10),
+        _LegendDot(color: palette.textMuted, text: '静音'),
       ],
     );
   }
@@ -1021,6 +1050,7 @@ class _LegendDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1032,8 +1062,8 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(
-            color: mutedTextColor,
+          style: TextStyle(
+            color: palette.textMuted,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
@@ -1056,23 +1086,22 @@ class _MetricPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = paletteOf(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: alert
-            ? accentColor.withValues(alpha: 0.12)
-            : softGreenColor.withValues(alpha: 0.8),
+        color: alert ? palette.accent.withValues(alpha: 0.12) : palette.soft,
         borderRadius: BorderRadius.circular(radiusSmall),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: alert ? accentColor : brandColor),
+          Icon(icon, size: 16, color: alert ? palette.accent : palette.brand),
           const SizedBox(width: 5),
           Text(
             text,
             style: TextStyle(
-              color: alert ? accentColor : brandDarkColor,
+              color: alert ? palette.accent : palette.brandDark,
               fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
