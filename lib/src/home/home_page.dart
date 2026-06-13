@@ -9,6 +9,8 @@ import '../data/jianpu_api.dart';
 import '../data/models.dart';
 import '../details/dynamic_detail_page.dart';
 import '../details/image_detail_page.dart';
+import '../pro/jianpu_local_score_store.dart';
+import '../pro/jianpu_maker_page.dart';
 import '../pro/jianpu_practice_page.dart';
 import '../pro/metronome_page.dart';
 import '../pro/scale_lab_page.dart';
@@ -28,6 +30,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _api = JianpuApi();
   final _favorites = FavoritesStore();
+  final _localScores = JianpuLocalScoreStore();
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   var _tab = 0;
@@ -47,6 +50,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _favorites.load();
+    _localScores.load();
     _load();
   }
 
@@ -55,6 +59,7 @@ class _HomePageState extends State<HomePage> {
     _scrollController.dispose();
     _searchController.dispose();
     _favorites.dispose();
+    _localScores.dispose();
     super.dispose();
   }
 
@@ -133,7 +138,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_favorites, widget.settings]),
+      animation: Listenable.merge([_favorites, _localScores, widget.settings]),
       builder: (context, _) {
         return Scaffold(
           body: SafeArea(
@@ -197,6 +202,10 @@ class _HomePageState extends State<HomePage> {
   Widget _buildTools() {
     return _ToolHub(
       settings: widget.settings,
+      onMaker: () async {
+        await Navigator.of(context).pushNamed(JianpuMakerPage.routeName);
+        await _localScores.load();
+      },
       onPractice: () =>
           Navigator.of(context).pushNamed(JianpuPracticePage.routeName),
       onScaleLab: () => Navigator.of(context).pushNamed(ScaleLabPage.routeName),
@@ -312,65 +321,103 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildFavorites() {
     final items = _favorites.items;
-    if (items.isEmpty) {
+    final localItems = _localScores.items;
+    if (items.isEmpty && localItems.isEmpty) {
       return const StateView(
         icon: AppIcons.bookmarkAddOutlined,
         title: '还没有收藏',
-        message: '收藏的谱子会放在这里',
+        message: '收藏和本地制作的谱子会放在这里',
       );
     }
-    return ListView.separated(
+    return ListView(
       padding: EdgeInsets.fromLTRB(
         16,
         widget.settings.compactList ? 6 : 10,
         16,
         24,
       ),
-      itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return ScoreCard(
-          title: item.title,
-          subtitle: item.subtitle.isEmpty
-              ? (item.kind == ScoreKind.dynamic ? '动态谱' : '图片谱')
-              : item.subtitle,
-          metric: item.kind == ScoreKind.dynamic ? '动态谱' : '图片谱',
-          badge: '收藏',
-          favorite: true,
-          imageUrl: item.imageUrl,
-          leadingIcon: item.kind == ScoreKind.dynamic
-              ? AppIcons.graphicEqRounded
-              : AppIcons.imageOutlined,
-          compact: widget.settings.compactList,
-          reduceMotion: widget.settings.reduceMotion,
-          onFavorite: () => _favorites.toggle(item),
-          onTap: () {
-            if (item.kind == ScoreKind.dynamic) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => DynamicDetailPage(
-                    api: _api,
-                    song: MusicSummary(
-                      id: int.tryParse(item.id) ?? 0,
-                      title: item.title,
-                      singer: '',
-                      arranger: '',
-                      times: 0,
-                      level: 0,
-                    ),
-                    favorites: _favorites,
-                    settings: widget.settings,
-                  ),
-                ),
-              );
-            } else {
-              _openImageDetail(ImageScoreItem.favorite(item));
-            }
-          },
-        );
-      },
+      children: [
+        if (localItems.isNotEmpty) ...[
+          const _SectionHeader(title: '本地制作', subtitle: '点击加载到制作页'),
+          const SizedBox(height: 10),
+          for (final item in localItems) ...[
+            _LocalScoreTile(
+              item: item,
+              compact: widget.settings.compactList,
+              onTap: () => _openLocalScore(item),
+              onDelete: () => _deleteLocalScore(item),
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (items.isNotEmpty) const SizedBox(height: 6),
+        ],
+        if (items.isNotEmpty) ...[
+          const _SectionHeader(title: '我的收藏', subtitle: '动态谱和图片谱'),
+          const SizedBox(height: 10),
+          for (final item in items) ...[
+            ScoreCard(
+              title: item.title,
+              subtitle: item.subtitle.isEmpty
+                  ? (item.kind == ScoreKind.dynamic ? '动态谱' : '图片谱')
+                  : item.subtitle,
+              metric: item.kind == ScoreKind.dynamic ? '动态谱' : '图片谱',
+              badge: '收藏',
+              favorite: true,
+              imageUrl: item.imageUrl,
+              leadingIcon: item.kind == ScoreKind.dynamic
+                  ? AppIcons.graphicEqRounded
+                  : AppIcons.imageOutlined,
+              compact: widget.settings.compactList,
+              reduceMotion: widget.settings.reduceMotion,
+              onFavorite: () => _favorites.toggle(item),
+              onTap: () => _openFavorite(item),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ],
+      ],
     );
+  }
+
+  Future<void> _openLocalScore(LocalJianpuScore item) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => JianpuMakerPage(
+          settings: widget.settings,
+          initialDraft: item.draft,
+          localScoreId: item.id,
+        ),
+      ),
+    );
+    await _localScores.load();
+  }
+
+  Future<void> _deleteLocalScore(LocalJianpuScore item) async {
+    await _localScores.delete(item.id);
+  }
+
+  void _openFavorite(FavoriteItem item) {
+    if (item.kind == ScoreKind.dynamic) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DynamicDetailPage(
+            api: _api,
+            song: MusicSummary(
+              id: int.tryParse(item.id) ?? 0,
+              title: item.title,
+              singer: '',
+              arranger: '',
+              times: 0,
+              level: 0,
+            ),
+            favorites: _favorites,
+            settings: widget.settings,
+          ),
+        ),
+      );
+    } else {
+      _openImageDetail(ImageScoreItem.favorite(item));
+    }
   }
 
   void _openImageDetail(ImageScoreItem item) {
@@ -558,15 +605,148 @@ class _HomeNavigation extends StatelessWidget {
   }
 }
 
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: palette.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: palette.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LocalScoreTile extends StatelessWidget {
+  const _LocalScoreTile({
+    required this.item,
+    required this.onTap,
+    required this.onDelete,
+    this.compact = false,
+  });
+
+  final LocalJianpuScore item;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(radiusMedium),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.all(compact ? 10 : 12),
+          child: Row(
+            children: [
+              Container(
+                width: compact ? 54 : 62,
+                height: compact ? 62 : 72,
+                decoration: BoxDecoration(
+                  color: palette.soft,
+                  borderRadius: BorderRadius.circular(radiusMedium),
+                ),
+                child: Icon(AppIcons.musicNoteRounded, color: palette.brand),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.text,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        InfoPill(label: '本地', color: palette.success),
+                        InfoPill(
+                          label: _formatLocalDate(item.updatedAt),
+                          color: palette.brand,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: '删除本地谱',
+                onPressed: onDelete,
+                icon: Icon(AppIcons.trashRounded, color: palette.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatLocalDate(DateTime value) {
+    return '${value.month}/${value.day} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  }
+}
+
 class _ToolHub extends StatelessWidget {
   const _ToolHub({
     required this.settings,
+    required this.onMaker,
     required this.onPractice,
     required this.onScaleLab,
     required this.onMetronome,
   });
 
   final AppSettings settings;
+  final VoidCallback onMaker;
   final VoidCallback onPractice;
   final VoidCallback onScaleLab;
   final VoidCallback onMetronome;
@@ -624,6 +804,13 @@ class _ToolHub extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        _ToolTile(
+          icon: AppIcons.addRounded,
+          title: '制作简谱',
+          subtitle: '触摸输入、歌词对齐和动态谱实时预览',
+          onTap: onMaker,
+        ),
+        const SizedBox(height: 10),
         _ToolTile(
           icon: AppIcons.menuBookRounded,
           title: '简谱练习',

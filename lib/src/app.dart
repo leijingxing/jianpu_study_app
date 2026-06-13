@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'data/app_settings.dart';
 import 'home/home_page.dart';
+import 'pro/jianpu_maker_page.dart';
 import 'pro/jianpu_practice_page.dart';
 import 'pro/metronome_page.dart';
 import 'pro/scale_lab_page.dart';
@@ -42,6 +43,8 @@ class _JianpuStudyAppState extends State<JianpuStudyApp> {
           themeMode: _themeModeOf(_settings.themeMode),
           home: HomePage(settings: _settings),
           routes: {
+            JianpuMakerPage.routeName: (_) =>
+                JianpuMakerPage(settings: _settings),
             JianpuPracticePage.routeName: (_) =>
                 JianpuPracticePage(settings: _settings),
             MetronomePage.routeName: (_) => const MetronomePage(),

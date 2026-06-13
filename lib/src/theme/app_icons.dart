@@ -8,6 +8,7 @@ class AppIcons {
   static const IconData arrowBackRounded = PhosphorIconsBold.arrowLeft;
   static const IconData arrowForwardRounded = PhosphorIconsBold.arrowRight;
   static const IconData avTimerRounded = PhosphorIconsRegular.metronome;
+  static const IconData backspaceRounded = PhosphorIconsRegular.backspace;
   static const IconData bookmarkAddOutlined =
       PhosphorIconsRegular.bookmarkSimple;
   static const IconData bookmarkBorder = PhosphorIconsRegular.bookmarkSimple;
@@ -67,6 +68,7 @@ class AppIcons {
   static const IconData timerOffOutlined = PhosphorIconsRegular.timer;
   static const IconData timerRounded = PhosphorIconsRegular.timer;
   static const IconData touchAppRounded = PhosphorIconsRegular.handTap;
+  static const IconData trashRounded = PhosphorIconsRegular.trash;
   static const IconData tuneRounded = PhosphorIconsRegular.slidersHorizontal;
   static const IconData videocamOffOutlined =
       PhosphorIconsRegular.videoCameraSlash;
