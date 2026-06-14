@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../theme/app_icons.dart';
 
@@ -46,6 +48,9 @@ class _MetronomePageState extends State<MetronomePage> {
   var _countInTicksRemaining = 0;
   var _startedAt = DateTime.now();
   var _accents = List.filled(4, _BeatAccent.normal);
+  var _tapCount = 0;
+  double _dragAccumulator = 0;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
@@ -56,7 +61,9 @@ class _MetronomePageState extends State<MetronomePage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _countdownTimer?.cancel();
     _synth.dispose();
+    WakelockPlus.disable();
     super.dispose();
   }
 
@@ -75,12 +82,17 @@ class _MetronomePageState extends State<MetronomePage> {
       _startedAt = DateTime.now();
       _nextTickAt = DateTime.now();
     });
+    WakelockPlus.enable();
     _timer = Timer.periodic(const Duration(milliseconds: 12), (_) => _pulse());
+    _startCountdownRefresh();
   }
 
   void _stop() {
     _timer?.cancel();
     _timer = null;
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    WakelockPlus.disable();
     setState(() {
       _playing = false;
       _activeBeat = -1;
@@ -151,6 +163,11 @@ class _MetronomePageState extends State<MetronomePage> {
         accented: accent == _BeatAccent.strong && subdivision == 0,
         volume: clickVolume,
       );
+      if (subdivision == 0) {
+        accent == _BeatAccent.strong
+            ? HapticFeedback.mediumImpact()
+            : HapticFeedback.lightImpact();
+      }
     }
 
     setState(() {
@@ -213,7 +230,10 @@ class _MetronomePageState extends State<MetronomePage> {
     final now = DateTime.now();
     _tapTimes.removeWhere((time) => now.difference(time).inSeconds > 3);
     _tapTimes.add(now);
-    if (_tapTimes.length < 2) return;
+    if (_tapTimes.length < 2) {
+      setState(() => _tapCount = 1);
+      return;
+    }
 
     final intervals = <int>[];
     for (var i = 1; i < _tapTimes.length; i++) {
@@ -221,7 +241,10 @@ class _MetronomePageState extends State<MetronomePage> {
     }
     final average = intervals.reduce((a, b) => a + b) / intervals.length;
     if (average <= 0) return;
-    setState(() => _bpm = (60000 / average).round().clamp(30, 300));
+    setState(() {
+      _bpm = (60000 / average).round().clamp(30, 300);
+      _tapCount = _tapTimes.length;
+    });
   }
 
   void _loadPreset(_MetronomePreset preset) {
@@ -246,6 +269,51 @@ class _MetronomePageState extends State<MetronomePage> {
     });
   }
 
+  void _startCountdownRefresh() {
+    _countdownTimer?.cancel();
+    if (_practiceMinutes > 0) {
+      _countdownTimer = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => setState(() {}),
+      );
+    }
+  }
+
+  static String _tempoMarking(int bpm) {
+    if (bpm <= 24) return 'Larghissimo';
+    if (bpm <= 40) return 'Grave';
+    if (bpm <= 55) return 'Largo';
+    if (bpm <= 65) return 'Larghetto';
+    if (bpm <= 76) return 'Adagio';
+    if (bpm <= 92) return 'Andante';
+    if (bpm <= 108) return 'Moderato';
+    if (bpm <= 120) return 'Allegretto';
+    if (bpm <= 140) return 'Allegro';
+    if (bpm <= 168) return 'Vivace';
+    if (bpm <= 200) return 'Presto';
+    return 'Prestissimo';
+  }
+
+  void _onBpmVerticalDrag(double dy) {
+    _dragAccumulator -= dy * 0.3;
+    if (_dragAccumulator.abs() >= 1) {
+      final delta = _dragAccumulator.truncate();
+      setState(() => _bpm = (_bpm + delta).clamp(30, 300));
+      _dragAccumulator -= delta;
+    }
+  }
+
+  String? _remainingTimeText() {
+    if (!_playing || _practiceMinutes <= 0) return null;
+    final elapsed = DateTime.now().difference(_startedAt).inSeconds;
+    final total = _practiceMinutes * 60;
+    final remaining = total - elapsed;
+    if (remaining <= 0) return null;
+    final minutes = remaining ~/ 60;
+    final seconds = remaining % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
@@ -267,32 +335,15 @@ class _MetronomePageState extends State<MetronomePage> {
                 _trainingMode == _TrainingMode.silentBars &&
                 _isTrainerSilentBar(),
             countIn: _countInTicksRemaining > 0,
+            barCount: _barCount,
+            tapCount: _tapCount,
+            tempoMarking: _tempoMarking(_bpm),
+            remainingTime: _remainingTimeText(),
             onPlay: _togglePlay,
             onBpmChanged: (value) => setState(() => _bpm = value),
             onTapTempo: _tapTempo,
             onAccentTap: _cycleAccent,
-          ),
-          const SizedBox(height: 12),
-          _Panel(
-            title: '速度',
-            icon: AppIcons.speedRounded,
-            child: Column(
-              children: [
-                _BpmControl(
-                  bpm: _bpm,
-                  onChanged: (value) => setState(() => _bpm = value),
-                ),
-                const SizedBox(height: 10),
-                Slider(
-                  min: 30,
-                  max: 300,
-                  divisions: 270,
-                  value: _bpm.toDouble(),
-                  label: '$_bpm BPM',
-                  onChanged: (value) => setState(() => _bpm = value.round()),
-                ),
-              ],
-            ),
+            onBpmDrag: _onBpmVerticalDrag,
           ),
           const SizedBox(height: 12),
           _Panel(
@@ -472,10 +523,15 @@ class _MetronomeDeck extends StatelessWidget {
     required this.accents,
     required this.silent,
     required this.countIn,
+    required this.barCount,
+    required this.tapCount,
+    required this.tempoMarking,
+    required this.remainingTime,
     required this.onPlay,
     required this.onBpmChanged,
     required this.onTapTempo,
     required this.onAccentTap,
+    required this.onBpmDrag,
   });
 
   final int bpm;
@@ -487,10 +543,15 @@ class _MetronomeDeck extends StatelessWidget {
   final List<_BeatAccent> accents;
   final bool silent;
   final bool countIn;
+  final int barCount;
+  final int tapCount;
+  final String tempoMarking;
+  final String? remainingTime;
   final VoidCallback onPlay;
   final ValueChanged<int> onBpmChanged;
   final VoidCallback onTapTempo;
   final ValueChanged<int> onAccentTap;
+  final ValueChanged<double> onBpmDrag;
 
   @override
   Widget build(BuildContext context) {
@@ -504,25 +565,36 @@ class _MetronomeDeck extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Row(
+          // --- Status pill row ---
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
             children: [
               _MetricPill(
                 icon: AppIcons.musicNoteRounded,
                 text: '$beatsPerBar/4',
               ),
-              const SizedBox(width: 8),
               _MetricPill(
                 icon: AppIcons.callSplitRounded,
                 text: '${subdivision}x',
               ),
-              const Spacer(),
+              if (playing && barCount > 0)
+                _MetricPill(
+                  icon: AppIcons.factCheckOutlined,
+                  text: '第$barCount小节',
+                ),
+              if (remainingTime != null)
+                _MetricPill(
+                  icon: AppIcons.timerRounded,
+                  text: remainingTime!,
+                  alert: true,
+                ),
               if (silent)
                 const _MetricPill(
                   icon: AppIcons.volumeOffRounded,
                   text: '静音训练',
                   alert: true,
                 ),
-              if (silent && countIn) const SizedBox(width: 8),
               if (countIn)
                 const _MetricPill(
                   icon: AppIcons.timerRounded,
@@ -532,6 +604,7 @@ class _MetronomeDeck extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          // --- Ring + BPM center (with drag gesture) ---
           SizedBox(
             height: 246,
             child: Stack(
@@ -554,51 +627,71 @@ class _MetronomeDeck extends StatelessWidget {
                     mutedColor: palette.textMuted,
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$bpm',
-                      style: TextStyle(
-                        color: palette.text,
-                        fontSize: 68,
-                        height: 0.9,
-                        fontWeight: FontWeight.w900,
-                      ),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: (d) => onBpmDrag(d.delta.dy),
+                  child: SizedBox(
+                    width: 140,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Small drag hint
+                        Icon(
+                          AppIcons.keyboardDoubleArrowUpRounded,
+                          size: 14,
+                          color: palette.textMuted.withValues(alpha: 0.4),
+                        ),
+                        Text(
+                          '$bpm',
+                          style: TextStyle(
+                            color: palette.text,
+                            fontSize: 68,
+                            height: 0.9,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          tempoMarking,
+                          style: TextStyle(
+                            color: palette.brand,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        // Small drag hint
+                        Icon(
+                          AppIcons.keyboardDoubleArrowDownRounded,
+                          size: 14,
+                          color: palette.textMuted.withValues(alpha: 0.4),
+                        ),
+                        const SizedBox(height: 6),
+                        FilledButton.icon(
+                          onPressed: onPlay,
+                          icon: Icon(
+                            playing
+                                ? AppIcons.pauseRounded
+                                : AppIcons.playArrowRounded,
+                          ),
+                          label: Text(playing ? '暂停' : '开始'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'BPM',
-                      style: TextStyle(
-                        color: palette.textMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: onPlay,
-                      icon: Icon(
-                        playing
-                            ? AppIcons.pauseRounded
-                            : AppIcons.playArrowRounded,
-                      ),
-                      label: Text(playing ? '暂停' : '开始'),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
+          // --- BPM ± buttons row (with long-press repeat) ---
           Row(
             children: [
-              IconButton.filledTonal(
+              _RepeatIconButton(
                 tooltip: '-5 BPM',
                 onPressed: () => onBpmChanged((bpm - 5).clamp(30, 300)),
                 icon: const Icon(AppIcons.keyboardDoubleArrowDownRounded),
               ),
-              IconButton.filledTonal(
+              _RepeatIconButton(
                 tooltip: '-1 BPM',
                 onPressed: () => onBpmChanged((bpm - 1).clamp(30, 300)),
                 icon: const Icon(AppIcons.removeRounded),
@@ -609,16 +702,18 @@ class _MetronomeDeck extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onTapTempo,
                     icon: const Icon(AppIcons.touchAppRounded),
-                    label: const Text('Tap Tempo'),
+                    label: Text(
+                      tapCount > 0 ? 'Tap ×$tapCount' : 'Tap Tempo',
+                    ),
                   ),
                 ),
               ),
-              IconButton.filledTonal(
+              _RepeatIconButton(
                 tooltip: '+1 BPM',
                 onPressed: () => onBpmChanged((bpm + 1).clamp(30, 300)),
                 icon: const Icon(AppIcons.addRounded),
               ),
-              IconButton.filledTonal(
+              _RepeatIconButton(
                 tooltip: '+5 BPM',
                 onPressed: () => onBpmChanged((bpm + 5).clamp(30, 300)),
                 icon: const Icon(AppIcons.keyboardDoubleArrowUpRounded),
@@ -626,6 +721,7 @@ class _MetronomeDeck extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          // --- Accent buttons grid ---
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -835,30 +931,7 @@ class _MetronomeRingPainter extends CustomPainter {
   }
 }
 
-class _BpmControl extends StatelessWidget {
-  const _BpmControl({required this.bpm, required this.onChanged});
 
-  final int bpm;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final marks = const [60, 72, 80, 96, 108, 120, 144];
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final mark in marks)
-          ChoiceChip(
-            label: Text('$mark'),
-            selected: bpm == mark,
-            onSelected: (_) => onChanged(mark),
-            visualDensity: VisualDensity.compact,
-          ),
-      ],
-    );
-  }
-}
 
 class _Panel extends StatelessWidget {
   const _Panel({required this.title, required this.icon, required this.child});
@@ -962,7 +1035,7 @@ class _NumberStepper extends StatelessWidget {
     return Row(
       children: [
         _ControlLabel(label),
-        IconButton.filledTonal(
+        _RepeatIconButton(
           tooltip: '减少',
           onPressed: onDecrease,
           icon: const Icon(AppIcons.removeRounded),
@@ -979,7 +1052,7 @@ class _NumberStepper extends StatelessWidget {
             ),
           ),
         ),
-        IconButton.filledTonal(
+        _RepeatIconButton(
           tooltip: '增加',
           onPressed: onIncrease,
           icon: const Icon(AppIcons.addRounded),
@@ -1241,3 +1314,58 @@ const _presets = [
     mutedBeats: [0, 2],
   ),
 ];
+
+/// An [IconButton.filledTonal] that repeats its [onPressed] callback when held.
+class _RepeatIconButton extends StatefulWidget {
+  const _RepeatIconButton({
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+  });
+
+  final Widget icon;
+  final VoidCallback onPressed;
+  final String? tooltip;
+
+  @override
+  State<_RepeatIconButton> createState() => _RepeatIconButtonState();
+}
+
+class _RepeatIconButtonState extends State<_RepeatIconButton> {
+  Timer? _delayTimer;
+  Timer? _repeatTimer;
+
+  void _startRepeat() {
+    _delayTimer = Timer(const Duration(milliseconds: 400), () {
+      _repeatTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
+        widget.onPressed();
+      });
+    });
+  }
+
+  void _stopRepeat() {
+    _delayTimer?.cancel();
+    _delayTimer = null;
+    _repeatTimer?.cancel();
+    _repeatTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopRepeat();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onLongPressStart: (_) => _startRepeat(),
+      onLongPressEnd: (_) => _stopRepeat(),
+      child: IconButton.filledTonal(
+        tooltip: widget.tooltip,
+        onPressed: widget.onPressed,
+        icon: widget.icon,
+      ),
+    );
+  }
+}
