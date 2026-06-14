@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:gal/gal.dart';
 
 import '../theme/app_icons.dart';
 import 'package:video_player/video_player.dart';
@@ -8,6 +10,7 @@ import '../data/favorites_store.dart';
 import '../data/jianpu_api.dart';
 import '../data/models.dart';
 import '../media/cached_video_controller.dart';
+import '../media/gallery_image_saver.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
@@ -33,6 +36,7 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
   ImageScoreDetail? _detail;
   Object? _error;
   var _loading = true;
+  var _savingImages = false;
 
   @override
   void initState() {
@@ -78,6 +82,20 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
         ),
         actions: [
           IconButton(
+            tooltip: '保存图片到相册',
+            onPressed:
+                _savingImages || _detail == null || _detail!.imageUrls.isEmpty
+                ? null
+                : _saveImages,
+            icon: _savingImages
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(AppIcons.downloadRounded),
+          ),
+          IconButton(
             tooltip: favorite ? '取消收藏' : '收藏',
             onPressed: () => widget.favorites.toggle(
               FavoriteItem(
@@ -96,6 +114,32 @@ class _ImageDetailPageState extends State<ImageDetailPage> {
       ),
       body: _buildBody(),
     );
+  }
+
+  Future<void> _saveImages() async {
+    final detail = _detail;
+    if (detail == null || detail.imageUrls.isEmpty || _savingImages) return;
+    setState(() => _savingImages = true);
+    try {
+      final result = await GalleryImageSaver.saveNetworkImages(
+        urls: detail.imageUrls,
+        namePrefix: widget.item.title,
+      );
+      if (!mounted) return;
+      final text = result.failed == 0
+          ? '已保存 ${result.saved} 张图片到相册'
+          : '已保存 ${result.saved} 张，${result.failed} 张保存失败';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    } on GalException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(GalleryImageSaver.galleryErrorMessage(error.type)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _savingImages = false);
+    }
   }
 
   Widget _buildBody() {
@@ -271,6 +315,28 @@ class _ScoreVideoState extends State<_ScoreVideo> {
     await controller.seekTo(clamped);
   }
 
+  Future<void> _openFullscreen() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final wasPlaying = controller.value.isPlaying;
+    final position = controller.value.position;
+    await controller.pause();
+    if (!mounted) return;
+    final resumedPosition = await Navigator.of(context).push<Duration>(
+      MaterialPageRoute<Duration>(
+        builder: (_) => _FullscreenScoreVideoPage(
+          url: widget.url,
+          initialPosition: position,
+          muted: _muted,
+          autoplay: wasPlaying,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await controller.seekTo(resumedPosition ?? position);
+    if (wasPlaying) await controller.play();
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
@@ -361,6 +427,7 @@ class _ScoreVideoState extends State<_ScoreVideo> {
                   onMute: _toggleMute,
                   onRewind: () => _seekBy(const Duration(seconds: -10)),
                   onForward: () => _seekBy(const Duration(seconds: 10)),
+                  onFullscreen: _openFullscreen,
                 ),
               ],
             );
@@ -441,6 +508,8 @@ class _VideoControls extends StatelessWidget {
     required this.onMute,
     required this.onRewind,
     required this.onForward,
+    required this.onFullscreen,
+    this.fullscreenExit = false,
   });
 
   final bool playing;
@@ -451,6 +520,8 @@ class _VideoControls extends StatelessWidget {
   final VoidCallback onMute;
   final VoidCallback onRewind;
   final VoidCallback onForward;
+  final VoidCallback onFullscreen;
+  final bool fullscreenExit;
 
   @override
   Widget build(BuildContext context) {
@@ -497,7 +568,216 @@ class _VideoControls extends StatelessWidget {
               color: Colors.white,
             ),
           ),
+          IconButton(
+            tooltip: fullscreenExit ? '退出全屏' : '全屏播放',
+            onPressed: onFullscreen,
+            icon: Icon(
+              fullscreenExit
+                  ? AppIcons.fullscreenExitRounded
+                  : AppIcons.fullscreenRounded,
+              color: Colors.white,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _FullscreenScoreVideoPage extends StatefulWidget {
+  const _FullscreenScoreVideoPage({
+    required this.url,
+    required this.initialPosition,
+    required this.muted,
+    required this.autoplay,
+  });
+
+  final String url;
+  final Duration initialPosition;
+  final bool muted;
+  final bool autoplay;
+
+  @override
+  State<_FullscreenScoreVideoPage> createState() =>
+      _FullscreenScoreVideoPageState();
+}
+
+class _FullscreenScoreVideoPageState extends State<_FullscreenScoreVideoPage> {
+  VideoPlayerController? _controller;
+  late final Future<void> _initialize;
+  late var _muted = widget.muted;
+  var _disposed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _initialize = _initializeController();
+  }
+
+  Future<void> _initializeController() async {
+    final result = await createCachedVideoController(Uri.parse(widget.url));
+    if (_disposed) {
+      await result.controller.dispose();
+      return;
+    }
+    _controller = result.controller;
+    _controller!.addListener(_onControllerChanged);
+    await _controller!.initialize();
+    await _controller!.setVolume(_muted ? 0 : 1);
+    if (widget.initialPosition > Duration.zero) {
+      await _controller!.seekTo(widget.initialPosition);
+    }
+    if (widget.autoplay) await _controller!.play();
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    final controller = _controller;
+    if (controller != null) {
+      controller.removeListener(_onControllerChanged);
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _togglePlay() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    controller.value.isPlaying
+        ? await controller.pause()
+        : await controller.play();
+  }
+
+  Future<void> _toggleMute() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    setState(() => _muted = !_muted);
+    await controller.setVolume(_muted ? 0 : 1);
+  }
+
+  Future<void> _seekBy(Duration offset) async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final duration = controller.value.duration;
+    final next = controller.value.position + offset;
+    final clamped = next.inMilliseconds.clamp(0, duration.inMilliseconds);
+    await controller.seekTo(Duration(milliseconds: clamped));
+  }
+
+  void _close() {
+    Navigator.of(context).pop(_controller?.value.position ?? Duration.zero);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _close();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: FutureBuilder<void>(
+            future: _initialize,
+            builder: (context, snapshot) {
+              final controller = _controller;
+              if (snapshot.hasError) {
+                return const StateView(
+                  icon: AppIcons.videocamOffOutlined,
+                  title: '视频加载失败',
+                  message: '当前视频地址不可访问。',
+                );
+              }
+              if (snapshot.connectionState != ConnectionState.done ||
+                  controller == null ||
+                  !controller.value.isInitialized) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return Column(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _togglePlay,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Center(
+                            child: AspectRatio(
+                              aspectRatio: controller.value.aspectRatio,
+                              child: VideoPlayer(controller),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: IconButton(
+                              tooltip: '退出全屏',
+                              onPressed: _close,
+                              icon: const Icon(
+                                AppIcons.fullscreenExitRounded,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          AnimatedOpacity(
+                            opacity: controller.value.isPlaying ? 0 : 1,
+                            duration: const Duration(milliseconds: 160),
+                            child: Container(
+                              width: 62,
+                              height: 62,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.54),
+                                borderRadius: BorderRadius.circular(
+                                  radiusMedium,
+                                ),
+                              ),
+                              child: const Icon(
+                                AppIcons.playArrowRounded,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  VideoProgressIndicator(
+                    controller,
+                    allowScrubbing: true,
+                    padding: EdgeInsets.zero,
+                    colors: const VideoProgressColors(
+                      playedColor: Colors.white,
+                      bufferedColor: Color(0x88FFFFFF),
+                      backgroundColor: Color(0x33FFFFFF),
+                    ),
+                  ),
+                  _VideoControls(
+                    playing: controller.value.isPlaying,
+                    muted: _muted,
+                    position: controller.value.position,
+                    duration: controller.value.duration,
+                    onPlay: _togglePlay,
+                    onMute: _toggleMute,
+                    onRewind: () => _seekBy(const Duration(seconds: -10)),
+                    onForward: () => _seekBy(const Duration(seconds: 10)),
+                    onFullscreen: _close,
+                    fullscreenExit: true,
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

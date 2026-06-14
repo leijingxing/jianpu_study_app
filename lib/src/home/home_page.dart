@@ -10,15 +10,19 @@ import '../data/jianpu_api.dart';
 import '../data/models.dart';
 import '../details/dynamic_detail_page.dart';
 import '../details/image_detail_page.dart';
+import '../details/yuepu_resource_detail_page.dart';
 import '../pro/instrument_analyzer_page.dart';
 import '../pro/jianpu_local_score_store.dart';
 import '../pro/jianpu_maker_page.dart';
 import '../pro/jianpu_practice_page.dart';
 import '../pro/metronome_page.dart';
 import '../pro/scale_lab_page.dart';
+import '../search/comprehensive_search_page.dart';
 import '../settings/settings_page.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+
+enum _HomeSource { legacy, yuepu }
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.settings});
@@ -33,10 +37,10 @@ class _HomePageState extends State<HomePage> {
   final _api = JianpuApi();
   final _favorites = FavoritesStore();
   final _localScores = JianpuLocalScoreStore();
-  final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   var _tab = 0;
   var _query = '';
+  var _source = _HomeSource.legacy;
   var _dynamicPage = 1;
   var _imagePage = 1;
   var _dynamicSongs = <MusicSummary>[];
@@ -59,7 +63,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _searchController.dispose();
     _favorites.dispose();
     _localScores.dispose();
     super.dispose();
@@ -87,17 +90,13 @@ class _HomePageState extends State<HomePage> {
 
     try {
       if (_tab == 0) {
-        final songs = _query.trim().isEmpty
-            ? await _api.fetchDynamicList(page: _dynamicPage)
-            : await _api.searchDynamic(_query);
+        final songs = await _fetchDynamicPage(_dynamicPage);
         _dynamicSongs = songs;
-        _dynamicHasMore = _query.trim().isEmpty && songs.isNotEmpty;
+        _dynamicHasMore = songs.isNotEmpty;
       } else if (_tab == 1) {
-        final scores = _query.trim().isEmpty
-            ? await _api.fetchImageList(page: _imagePage)
-            : await _api.searchImages(_query);
+        final scores = await _fetchImagePage(_imagePage);
         _imageScores = scores;
-        _imageHasMore = _query.trim().isEmpty && scores.isNotEmpty;
+        _imageHasMore = scores.isNotEmpty;
       }
     } catch (error) {
       _error = error;
@@ -108,7 +107,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadMore() async {
     final hasMore = _tab == 0 ? _dynamicHasMore : _imageHasMore;
-    if (_tab > 1 || _query.trim().isNotEmpty || _loading || _loadingMore) {
+    if (_tab > 1 || _loading || _loadingMore) {
       return;
     }
     if (!hasMore) return;
@@ -119,13 +118,13 @@ class _HomePageState extends State<HomePage> {
     try {
       if (_tab == 0) {
         final nextPage = _dynamicPage + 1;
-        final songs = await _api.fetchDynamicList(page: nextPage);
+        final songs = await _fetchDynamicPage(nextPage);
         _dynamicPage = nextPage;
         _dynamicHasMore = songs.isNotEmpty;
         _dynamicSongs.addAll(songs);
       } else if (_tab == 1) {
         final nextPage = _imagePage + 1;
-        final scores = await _api.fetchImageList(page: nextPage);
+        final scores = await _fetchImagePage(nextPage);
         _imagePage = nextPage;
         _imageHasMore = scores.isNotEmpty;
         _imageScores.addAll(scores);
@@ -135,6 +134,20 @@ class _HomePageState extends State<HomePage> {
     } finally {
       if (mounted) setState(() => _loadingMore = false);
     }
+  }
+
+  Future<List<MusicSummary>> _fetchDynamicPage(int page) {
+    return switch (_source) {
+      _HomeSource.legacy => _api.fetchDynamicList(page: page),
+      _HomeSource.yuepu => _api.fetchYuepuDynamicList(page: page),
+    };
+  }
+
+  Future<List<ImageScoreItem>> _fetchImagePage(int page) {
+    return switch (_source) {
+      _HomeSource.legacy => _api.fetchImageList(page: page),
+      _HomeSource.yuepu => _api.fetchYuepuSheetList(page: page),
+    };
   }
 
   @override
@@ -152,16 +165,10 @@ class _HomePageState extends State<HomePage> {
                 left: 0,
                 right: 0,
                 child: _HomeTopBar(
-                  controller: _searchController,
                   tab: _tab,
-                  onSearch: (value) {
-                    if (_tab == 2) {
-                      setState(() => _query = value);
-                    } else if (_tab < 2) {
-                      _query = value;
-                      _load();
-                    }
-                  },
+                  source: _source,
+                  onOpenSearch: _openSearch,
+                  onSourceChanged: _changeSource,
                   onSettings: _openSettings,
                 ),
               ),
@@ -173,7 +180,6 @@ class _HomePageState extends State<HomePage> {
               setState(() {
                 _tab = index;
                 _query = '';
-                _searchController.clear();
                 _error = null;
               });
               if (index < 2) _load();
@@ -226,7 +232,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDynamicList() {
-    final topPadding = MediaQuery.viewPaddingOf(context).top + 116;
+    final topPadding = _contentTopPadding(context);
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
@@ -243,38 +249,31 @@ class _HomePageState extends State<HomePage> {
           if (index == _dynamicSongs.length) {
             return LoadMoreIndicator(
               loading: _loadingMore,
-              hasMore: _dynamicHasMore && _query.trim().isEmpty,
+              hasMore: _dynamicHasMore,
             );
           }
           final song = _dynamicSongs[index];
-          final favorite = _favorites.contains(ScoreKind.dynamic, '${song.id}');
+          final favorite = _favorites.contains(
+            ScoreKind.dynamic,
+            song.favoriteId,
+          );
           return ScoreCard(
             title: song.title,
             subtitle: song.subtitle,
-            metric: '练习 ${song.times}',
-            badge: song.level > 0 ? '难度 ${song.level}' : '动态谱',
+            metric: song.isYuepu
+                ? (song.tracks.isEmpty ? '预览视频' : '${song.tracks.length} 轨')
+                : '练习 ${song.times}',
+            badge: song.isYuepu
+                ? '悦谱资源'
+                : (song.level > 0 ? '难度 ${song.level}' : '动态谱'),
             favorite: favorite,
-            leadingIcon: AppIcons.graphicEqRounded,
+            leadingIcon: song.isYuepu
+                ? AppIcons.playCircleOutline
+                : AppIcons.graphicEqRounded,
             compact: widget.settings.compactList,
             reduceMotion: widget.settings.reduceMotion,
-            onFavorite: () => _favorites.toggle(
-              FavoriteItem(
-                kind: ScoreKind.dynamic,
-                id: '${song.id}',
-                title: song.title,
-                subtitle: song.subtitle,
-              ),
-            ),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => DynamicDetailPage(
-                  api: _api,
-                  song: song,
-                  favorites: _favorites,
-                  settings: widget.settings,
-                ),
-              ),
-            ),
+            onFavorite: () => _favorites.toggle(song.toFavoriteItem()),
+            onTap: () => _openDynamicDetail(song),
           );
         },
       ),
@@ -282,7 +281,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildImageList() {
-    final topPadding = MediaQuery.viewPaddingOf(context).top + 116;
+    final topPadding = _contentTopPadding(context);
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
@@ -299,7 +298,7 @@ class _HomePageState extends State<HomePage> {
           if (index == _imageScores.length) {
             return LoadMoreIndicator(
               loading: _loadingMore,
-              hasMore: _imageHasMore && _query.trim().isEmpty,
+              hasMore: _imageHasMore,
             );
           }
           final item = _imageScores[index];
@@ -308,23 +307,17 @@ class _HomePageState extends State<HomePage> {
             title: item.title,
             subtitle: item.displaySubtitle,
             metric: '${item.views} 浏览',
-            badge: item.hasVideo ? '视频' : '图片',
+            badge: item.isYuepu ? '悦谱曲谱' : (item.hasVideo ? '视频' : '图片'),
             favorite: favorite,
             imageUrl: item.imageUrl,
-            leadingIcon: item.hasVideo
+            leadingIcon: item.isYuepu
+                ? AppIcons.menuBookRounded
+                : item.hasVideo
                 ? AppIcons.playCircleOutline
                 : AppIcons.imageOutlined,
             compact: widget.settings.compactList,
             reduceMotion: widget.settings.reduceMotion,
-            onFavorite: () => _favorites.toggle(
-              FavoriteItem(
-                kind: ScoreKind.image,
-                id: item.id,
-                title: item.title,
-                subtitle: item.summary,
-                imageUrl: item.imageUrl,
-              ),
-            ),
+            onFavorite: () => _favorites.toggle(item.toFavoriteItem()),
             onTap: () => _openImageDetail(item),
           );
         },
@@ -335,7 +328,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildFavorites() {
     final items = _favorites.items;
     final localItems = _localScores.items;
-    final topPadding = MediaQuery.viewPaddingOf(context).top + 116;
+    final topPadding = _contentTopPadding(context);
     if (items.isEmpty && localItems.isEmpty) {
       return Padding(
         padding: EdgeInsets.only(top: topPadding, bottom: 96),
@@ -409,15 +402,13 @@ class _HomePageState extends State<HomePage> {
             ScoreCard(
               title: item.title,
               subtitle: item.subtitle.isEmpty
-                  ? (item.kind == ScoreKind.dynamic ? '动态谱' : '图片谱')
+                  ? _favoriteFallbackSubtitle(item.kind)
                   : item.subtitle,
-              metric: item.kind == ScoreKind.dynamic ? '动态谱' : '图片谱',
+              metric: _favoriteKindLabel(item.kind),
               badge: '收藏',
               favorite: true,
               imageUrl: item.imageUrl,
-              leadingIcon: item.kind == ScoreKind.dynamic
-                  ? AppIcons.graphicEqRounded
-                  : AppIcons.imageOutlined,
+              leadingIcon: _favoriteIcon(item.kind),
               compact: widget.settings.compactList,
               reduceMotion: widget.settings.reduceMotion,
               onFavorite: () => _favorites.toggle(item),
@@ -449,37 +440,47 @@ class _HomePageState extends State<HomePage> {
 
   void _openFavorite(FavoriteItem item) {
     if (item.kind == ScoreKind.dynamic) {
+      _openDynamicDetail(MusicSummary.fromFavorite(item));
+    } else if (item.kind == ScoreKind.image) {
+      _openImageDetail(ImageScoreItem.favorite(item));
+    } else {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => DynamicDetailPage(
-            api: _api,
-            song: MusicSummary(
-              id: int.tryParse(item.id) ?? 0,
-              title: item.title,
-              singer: '',
-              arranger: '',
-              times: 0,
-              level: 0,
-            ),
+          builder: (_) => YuepuResourceDetailPage.accompaniment(
+            accompaniment: AccompanimentItem.fromFavorite(item),
             favorites: _favorites,
-            settings: widget.settings,
           ),
         ),
       );
-    } else {
-      _openImageDetail(ImageScoreItem.favorite(item));
     }
+  }
+
+  void _openDynamicDetail(MusicSummary song) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => song.isYuepu
+            ? YuepuResourceDetailPage.dynamic(song: song, favorites: _favorites)
+            : DynamicDetailPage(
+                api: _api,
+                song: song,
+                favorites: _favorites,
+                settings: widget.settings,
+              ),
+      ),
+    );
   }
 
   void _openImageDetail(ImageScoreItem item) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ImageDetailPage(
-          api: _api,
-          item: item,
-          favorites: _favorites,
-          settings: widget.settings,
-        ),
+        builder: (_) => item.isYuepu
+            ? YuepuResourceDetailPage.sheet(sheet: item, favorites: _favorites)
+            : ImageDetailPage(
+                api: _api,
+                item: item,
+                favorites: _favorites,
+                settings: widget.settings,
+              ),
       ),
     );
   }
@@ -491,25 +492,80 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  void _openSearch([String initialQuery = '']) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ComprehensiveSearchPage(
+          api: _api,
+          favorites: _favorites,
+          settings: widget.settings,
+          initialQuery: initialQuery,
+        ),
+      ),
+    );
+  }
+
+  void _changeSource(_HomeSource source) {
+    if (_source == source) return;
+    setState(() {
+      _source = source;
+      _error = null;
+      _dynamicSongs = [];
+      _imageScores = [];
+    });
+    if (_tab < 2) _load();
+  }
+
+  double _contentTopPadding(BuildContext context) {
+    final safeTop = MediaQuery.viewPaddingOf(context).top;
+    return safeTop + (_tab < 2 ? 116 : 70);
+  }
+
+  String _favoriteKindLabel(ScoreKind kind) {
+    return switch (kind) {
+      ScoreKind.dynamic => '动态谱',
+      ScoreKind.image => '图片谱',
+      ScoreKind.accompaniment => '伴奏',
+    };
+  }
+
+  String _favoriteFallbackSubtitle(ScoreKind kind) {
+    return switch (kind) {
+      ScoreKind.dynamic => '动态谱',
+      ScoreKind.image => '图片谱',
+      ScoreKind.accompaniment => '伴奏音频',
+    };
+  }
+
+  IconData _favoriteIcon(ScoreKind kind) {
+    return switch (kind) {
+      ScoreKind.dynamic => AppIcons.graphicEqRounded,
+      ScoreKind.image => AppIcons.imageOutlined,
+      ScoreKind.accompaniment => AppIcons.playlistPlayRounded,
+    };
+  }
 }
 
 class _HomeTopBar extends StatelessWidget {
   const _HomeTopBar({
-    required this.controller,
     required this.tab,
-    required this.onSearch,
+    required this.source,
+    required this.onOpenSearch,
+    required this.onSourceChanged,
     required this.onSettings,
   });
 
-  final TextEditingController controller;
   final int tab;
-  final ValueChanged<String> onSearch;
+  final _HomeSource source;
+  final ValueChanged<String> onOpenSearch;
+  final ValueChanged<_HomeSource> onSourceChanged;
   final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    final showSearch = tab < 3;
+    final showSourceTabs = tab < 2;
     final topPadding = MediaQuery.viewPaddingOf(context).top;
     return ClipRect(
       child: BackdropFilter(
@@ -567,6 +623,21 @@ class _HomeTopBar extends StatelessWidget {
                     ),
                   ),
                   IconButton(
+                    tooltip: '综合搜索',
+                    onPressed: () => onOpenSearch(''),
+                    icon: const Icon(AppIcons.searchRounded),
+                    style: IconButton.styleFrom(
+                      fixedSize: const Size(40, 40),
+                      foregroundColor: palette.text,
+                      backgroundColor: palette.paperTint,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(radiusMedium),
+                        side: BorderSide(color: palette.line),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
                     tooltip: '设置',
                     onPressed: onSettings,
                     icon: const Icon(AppIcons.settingsOutlined),
@@ -582,49 +653,97 @@ class _HomeTopBar extends StatelessWidget {
                   ),
                 ],
               ),
-              if (showSearch) ...[
+              if (showSourceTabs) ...[
                 const SizedBox(height: 12),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: controller,
-                  builder: (context, value, _) {
-                    return SizedBox(
-                      height: 44,
-                      child: TextField(
-                        controller: controller,
-                        enabled: true,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: onSearch,
-                        decoration: InputDecoration(
-                          hintText: switch (tab) {
-                            0 => '搜索歌名、歌手、编配',
-                            1 => '搜索图片谱标题',
-                            2 => '搜索收藏和本地简谱',
-                            _ => '',
-                          },
-                          prefixIcon: const Icon(
-                            AppIcons.searchRounded,
-                            size: 21,
-                          ),
-                          suffixIcon: value.text.isEmpty
-                              ? null
-                              : IconButton(
-                                  tooltip: '清除搜索',
-                                  onPressed: () {
-                                    controller.clear();
-                                    onSearch('');
-                                  },
-                                  icon: const Icon(
-                                    AppIcons.closeRounded,
-                                    size: 20,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                _SourceTabs(source: source, onChanged: onSourceChanged),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SourceTabs extends StatelessWidget {
+  const _SourceTabs({required this.source, required this.onChanged});
+
+  final _HomeSource source;
+  final ValueChanged<_HomeSource> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: palette.soft,
+        borderRadius: BorderRadius.circular(radiusMedium),
+        border: Border.all(color: palette.line),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SourceTabButton(
+              label: '旧接口',
+              selected: source == _HomeSource.legacy,
+              onTap: () => onChanged(_HomeSource.legacy),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _SourceTabButton(
+              label: '悦谱接口',
+              selected: source == _HomeSource.yuepu,
+              onTap: () => onChanged(_HomeSource.yuepu),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceTabButton extends StatelessWidget {
+  const _SourceTabButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(radiusSmall),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? palette.paperTint : Colors.transparent,
+          borderRadius: BorderRadius.circular(radiusSmall),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: palette.shadow.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? palette.brandDark : palette.textMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),

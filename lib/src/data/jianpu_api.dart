@@ -11,6 +11,11 @@ class JianpuApi {
   final http.Client _client;
   static const musicBase = 'http://guji666.com';
   static const forumBase = 'http://www.jita666.com';
+  static const yuepuBase = 'http://xp.yuepuvip.com:8100/one';
+  static const _headers = {
+    'User-Agent':
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Mobile Safari/537.36',
+  };
 
   Future<List<MusicSummary>> fetchDynamicList({
     int page = 1,
@@ -40,6 +45,28 @@ class JianpuApi {
           .toLowerCase()
           .contains(normalized);
     }).toList();
+  }
+
+  Future<List<MusicSummary>> fetchYuepuDynamicList({
+    int page = 1,
+    int limit = 30,
+    String query = '',
+  }) async {
+    final params = {
+      'offset': '$page',
+      'limit': '$limit',
+      if (query.trim().isNotEmpty) 'specNames': query.trim(),
+    };
+    final uri = Uri.parse(
+      '$yuepuBase/oper/queryDynAppList',
+    ).replace(queryParameters: params);
+    final json = await _getJson(uri, headers: _headers);
+    final list = (json['rows'] as List? ?? const []);
+    return list
+        .whereType<Map>()
+        .map((item) => MusicSummary.fromYuepuJson(item.cast<String, dynamic>()))
+        .where((item) => item.externalId.isNotEmpty && item.title.isNotEmpty)
+        .toList();
   }
 
   Future<MusicDetail> fetchDynamicDetail(int id) async {
@@ -97,7 +124,68 @@ class JianpuApi {
     }).toList();
   }
 
+  Future<List<ImageScoreItem>> fetchYuepuSheetList({
+    int page = 1,
+    int limit = 30,
+    String query = '',
+  }) async {
+    final params = {
+      'offset': '$page',
+      'limit': '$limit',
+      if (query.trim().isNotEmpty) 'musTitle': query.trim(),
+      if (query.trim().isNotEmpty) 'type': 'musscore',
+      'versionNo': '66',
+    };
+    final uri = Uri.parse(
+      '$yuepuBase/musscore/list',
+    ).replace(queryParameters: params);
+    final json = await _getJson(uri, headers: _headers);
+    final list = (json['rows'] as List? ?? const []);
+    return list
+        .whereType<Map>()
+        .map(
+          (item) => ImageScoreItem.fromYuepuJson(item.cast<String, dynamic>()),
+        )
+        .where((item) => item.id != 'yuepu-mus:' && item.title.isNotEmpty)
+        .toList();
+  }
+
+  Future<List<AccompanimentItem>> fetchYuepuAccompanimentList({
+    int page = 1,
+    int limit = 30,
+    String query = '',
+  }) async {
+    final params = {
+      'offset': '$page',
+      'limit': '$limit',
+      if (query.trim().isNotEmpty) 'accNames': query.trim(),
+      if (query.trim().isNotEmpty) 'type': 'accompany',
+      'versionNo': '66',
+    };
+    final uri = Uri.parse(
+      '$yuepuBase/accompany/list',
+    ).replace(queryParameters: params);
+    final json = await _getJson(uri, headers: _headers);
+    final list = (json['rows'] as List? ?? const []);
+    return list
+        .whereType<Map>()
+        .map(
+          (item) =>
+              AccompanimentItem.fromYuepuJson(item.cast<String, dynamic>()),
+        )
+        .where((item) => item.id.isNotEmpty && item.title.isNotEmpty)
+        .toList();
+  }
+
   Future<ImageScoreDetail> fetchImageDetail(ImageScoreItem item) async {
+    if (item.isYuepu) {
+      final imageUrls = item.fileUrls.where(_looksLikeImageUrl).toList();
+      return ImageScoreDetail(
+        item: item,
+        imageUrls: imageUrls,
+        videoUrls: const [],
+      );
+    }
     final uri = Uri.parse('$forumBase/article-${item.id}-1.html');
     final response = await _client.get(uri);
     if (response.statusCode != 200) {
@@ -119,10 +207,35 @@ class JianpuApi {
     );
   }
 
-  Future<Map<String, dynamic>> _getJson(Uri uri) async {
-    final response = await _client.get(uri);
+  Future<Map<String, dynamic>> _getJson(
+    Uri uri, {
+    Map<String, String>? headers,
+  }) async {
+    final response = await _client.get(uri, headers: headers);
+    return _decodeJsonResponse(response);
+  }
+
+  Future<List<T>> mergeLists<T>(
+    List<Future<List<T>> Function()> loaders,
+  ) async {
+    final result = <T>[];
+    Object? firstError;
+    for (final loader in loaders) {
+      try {
+        result.addAll(await loader());
+      } catch (error) {
+        firstError ??= error;
+        if (kDebugMode) debugPrint('[接口聚合] $error');
+      }
+    }
+    if (result.isEmpty && firstError != null) throw firstError;
+    return result;
+  }
+
+  Map<String, dynamic> _decodeJsonResponse(http.Response response) {
     if (response.statusCode != 200) {
-      throw Exception('接口请求失败: ${response.statusCode}');
+      final requestUrl = response.request?.url.toString() ?? 'unknown';
+      throw Exception('接口请求失败: ${response.statusCode} $requestUrl');
     }
     final text = utf8.decode(response.bodyBytes);
     return (jsonDecode(text) as Map).cast<String, dynamic>();
@@ -150,15 +263,16 @@ class JianpuApi {
     for (final match in matches) {
       final src = match.group(1) ?? '';
       final url = normalizeForumUrl(_decodeHtmlAttribute(src));
-      final lower = url.toLowerCase();
-      final looksLikeScoreImage = RegExp(
-        r'\.(jpg|jpeg|png|gif|webp)(\?|$)',
-      ).hasMatch(lower);
-      if (looksLikeScoreImage && seen.add(url)) {
+      if (_looksLikeImageUrl(url) && seen.add(url)) {
         urls.add(url);
       }
     }
     return urls;
+  }
+
+  bool _looksLikeImageUrl(String url) {
+    final lower = url.toLowerCase();
+    return RegExp(r'\.(jpg|jpeg|png|gif|webp)(\?|$)').hasMatch(lower);
   }
 
   List<String> _extractVideoUrls(String html) {

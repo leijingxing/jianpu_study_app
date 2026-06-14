@@ -21,12 +21,15 @@ class AppIcons {
   static const IconData closeRounded = PhosphorIconsBold.x;
   static const IconData cloudOutlined = PhosphorIconsRegular.cloud;
   static const IconData downloadDone = PhosphorIconsRegular.cloudCheck;
+  static const IconData downloadRounded = PhosphorIconsRegular.downloadSimple;
   static const IconData errorOutlineRounded =
       PhosphorIconsRegular.warningCircle;
   static const IconData factCheckOutlined = PhosphorIconsRegular.checkSquare;
   static const IconData fitnessCenterRounded = PhosphorIconsRegular.trendUp;
   static const IconData forward10Rounded =
       PhosphorIconsRegular.fastForwardCircle;
+  static const IconData fullscreenExitRounded = PhosphorIconsRegular.cornersIn;
+  static const IconData fullscreenRounded = PhosphorIconsRegular.cornersOut;
   static const IconData graphicEqRounded = PhosphorIconsRegular.waveform;
   static const IconData grid4x4Rounded = PhosphorIconsRegular.gridFour;
   static const IconData hearingRounded = PhosphorIconsRegular.ear;
