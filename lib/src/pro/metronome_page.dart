@@ -686,13 +686,37 @@ class _MetronomeRingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final radius = math.min(size.width, size.height) / 2 - 14;
-    final basePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 10
-      ..strokeCap = StrokeCap.round
-      ..color = lineColor;
-    canvas.drawCircle(center, radius, basePaint);
 
+    // 1. Draw glowing outer ring backdrop when playing
+    if (playing) {
+      final pulseAuraPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 12
+        ..color = brandColor.withValues(alpha: 0.08);
+      canvas.drawCircle(center, radius + 2, pulseAuraPaint);
+    }
+
+    // 2. Draw outer boundary thin circle
+    final thinOutline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = lineColor.withValues(alpha: 0.3);
+    canvas.drawCircle(center, radius + 5, thinOutline);
+
+    // 3. Draw DAW tick marks around the ring
+    final tickPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = lineColor.withValues(alpha: 0.45);
+    const tickCount = 60;
+    for (var i = 0; i < tickCount; i++) {
+      final angle = -math.pi / 2 + i * 2 * math.pi / tickCount;
+      final outer = center + Offset(math.cos(angle), math.sin(angle)) * radius;
+      final inner = center + Offset(math.cos(angle), math.sin(angle)) * (radius - 5);
+      canvas.drawLine(outer, inner, tickPaint);
+    }
+
+    // 4. Draw beat node markers
     for (var i = 0; i < beatsPerBar; i++) {
       final angle = -math.pi / 2 + i * 2 * math.pi / beatsPerBar;
       final point = center + Offset(math.cos(angle), math.sin(angle)) * radius;
@@ -704,27 +728,94 @@ class _MetronomeRingPainter extends CustomPainter {
         _BeatAccent.soft => amberColor,
         _BeatAccent.mute => mutedColor,
       };
-      final paint = Paint()
-        ..color = active ? color : color.withValues(alpha: 0.3);
-      canvas.drawCircle(point, active ? 14 : 9, paint);
+
+      if (active) {
+        // Glowing halo for active beat
+        final glowPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..color = color.withValues(alpha: 0.35);
+        canvas.drawCircle(point, 18, glowPaint);
+
+        // Core fill ring
+        final strokePaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3.5
+          ..color = color;
+        canvas.drawCircle(point, 11, strokePaint);
+
+        // Center dot
+        final centerDot = Paint()
+          ..style = PaintingStyle.fill
+          ..color = textColor;
+        canvas.drawCircle(point, 5, centerDot);
+      } else {
+        // Regular inactive beat indicator
+        final dotPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..color = color.withValues(alpha: 0.3);
+        canvas.drawCircle(point, 8, dotPaint);
+
+        // Draw a tiny index number next to it
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: '${i + 1}',
+            style: TextStyle(
+              color: color.withValues(alpha: 0.75),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final textOffset = center +
+            Offset(math.cos(angle), math.sin(angle)) * (radius - 20) -
+            Offset(textPainter.width / 2, textPainter.height / 2);
+        textPainter.paint(canvas, textOffset);
+      }
     }
 
+    // 5. Draw DAW Pointer Needle
     if (playing && activeBeat >= 0) {
       final progress =
           (activeBeat + activeSubdivision / subdivision) /
           math.max(1, beatsPerBar);
       final angle = -math.pi / 2 + progress * 2 * math.pi;
-      final handPaint = Paint()
+
+      // Glow sweep arc path
+      final sweepPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 10
+        ..color = accentColor.withValues(alpha: 0.12);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - 8),
+        -math.pi / 2,
+        progress * 2 * math.pi,
+        false,
+        sweepPaint,
+      );
+
+      // Main needle arm
+      final needlePaint = Paint()
         ..color = accentColor
         ..strokeWidth = 4
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(
-        center,
-        center + Offset(math.cos(angle), math.sin(angle)) * (radius - 20),
-        handPaint,
+        center + Offset(math.cos(angle), math.sin(angle)) * 16,
+        center + Offset(math.cos(angle), math.sin(angle)) * (radius - 12),
+        needlePaint,
       );
-      canvas.drawCircle(center, 5, Paint()..color = textColor);
     }
+
+    // 6. Draw central hub
+    final hubPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = textColor;
+    canvas.drawCircle(center, 9, hubPaint);
+    
+    final hubInner = Paint()
+      ..style = PaintingStyle.fill
+      ..color = lineColor;
+    canvas.drawCircle(center, 4, hubInner);
   }
 
   @override

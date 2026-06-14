@@ -456,9 +456,16 @@ class _JianpuMakerPageState extends State<JianpuMakerPage> {
           ? EdgeInsets.zero
           : EdgeInsets.fromLTRB(wide ? 16 : 16, 12, 16, wide ? 16 : 0),
       decoration: BoxDecoration(
-        color: palette.paperTint,
-        border: Border.all(color: palette.line),
+        color: palette.surfaceAlt,
+        border: Border.all(color: palette.line.withValues(alpha: 0.8), width: 1.1),
         borderRadius: BorderRadius.circular(radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: palette.shadow.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -509,7 +516,7 @@ class _JianpuMakerPageState extends State<JianpuMakerPage> {
           else
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 14),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
                 child: InteractiveViewer(
                   minScale: 0.75,
                   maxScale: 1.8,
@@ -518,8 +525,20 @@ class _JianpuMakerPageState extends State<JianpuMakerPage> {
                     alignment: Alignment.topCenter,
                     child: RepaintBoundary(
                       key: _previewBoundaryKey,
-                      child: ColoredBox(
-                        color: palette.paperTint,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: palette.paperTint,
+                          borderRadius: BorderRadius.circular(radiusSmall),
+                          border: Border.all(color: palette.line.withValues(alpha: 0.6), width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: palette.shadow.withValues(alpha: 0.08),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(8),
                         child: JianpuScoreView(
                           document: _draft.toDocument(),
                           detail: _draft.toDetail(),
@@ -1011,6 +1030,8 @@ class _DegreePad extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     const degrees = ['1', '2', '3', '4', '5', '6', '7', '0'];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -1024,21 +1045,57 @@ class _DegreePad extends StatelessWidget {
       itemBuilder: (context, index) {
         final degree = degrees[index];
         final selected = degree == selectedDegree;
-        return Material(
-          color: selected ? palette.brand : palette.surfaceAlt,
-          borderRadius: BorderRadius.circular(radiusMedium),
-          child: InkWell(
+        final isRest = degree == '0';
+
+        Color buttonColor;
+        Color textColor;
+        if (selected) {
+          buttonColor = isRest ? palette.accent : palette.brand;
+          textColor = isDark && !isRest ? const Color(0xFF08111F) : Colors.white;
+        } else {
+          buttonColor = isRest ? palette.surfaceAlt : palette.soft;
+          textColor = isRest ? palette.textMuted : palette.text;
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: buttonColor,
             borderRadius: BorderRadius.circular(radiusMedium),
-            onTap: () => onSelected(degree),
-            child: Center(
-              child: Text(
-                degree,
-                style: TextStyle(
-                  color: selected
-                      ? Theme.of(context).colorScheme.onPrimary
-                      : palette.text,
-                  fontSize: 25,
-                  fontWeight: FontWeight.w900,
+            border: Border.all(
+              color: selected
+                  ? (isRest ? palette.accent : palette.brand)
+                  : palette.line.withValues(alpha: 0.7),
+              width: selected ? 1.6 : 1.1,
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: (isRest ? palette.accent : palette.brand).withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: palette.shadow.withValues(alpha: 0.03),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1.5),
+                    ),
+                  ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(radiusMedium),
+              onTap: () => onSelected(degree),
+              child: Center(
+                child: Text(
+                  isRest ? '0 (休)' : degree,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: isRest ? 18 : 24,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),

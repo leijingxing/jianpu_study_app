@@ -10,8 +10,8 @@ const amberColor = Color(0xFFE0A12B);
 const mutedTextColor = Color(0xFF687385);
 const lineColor = Color(0xFFE1E6EF);
 const softGreenColor = Color(0xFFEAF1FF);
-const radiusSmall = 6.0;
-const radiusMedium = 8.0;
+const radiusSmall = 8.0;
+const radiusMedium = 12.0;
 
 class QingpuPalette extends ThemeExtension<QingpuPalette> {
   const QingpuPalette({
@@ -109,36 +109,36 @@ QingpuPalette paletteOf(BuildContext context) =>
 QingpuPalette _paletteFor(Brightness brightness) {
   return switch (brightness) {
     Brightness.light => const QingpuPalette(
-      brand: Color(0xFF246BFE),
-      brandDark: Color(0xFF1745A8),
-      paper: Color(0xFFF5F7FB),
+      brand: Color(0xFF2E4057),
+      brandDark: Color(0xFF1F2D3D),
+      paper: Color(0xFFFBF9F5),
       paperTint: Color(0xFFFFFFFF),
-      accent: Color(0xFFE0593E),
-      amber: Color(0xFFE0A12B),
-      soft: Color(0xFFEAF1FF),
-      text: Color(0xFF161B22),
-      textMuted: Color(0xFF687385),
-      line: Color(0xFFE1E6EF),
-      surfaceAlt: Color(0xFFF0F3F8),
-      success: Color(0xFF15946A),
-      danger: Color(0xFFD33F49),
-      shadow: Color(0x1A111827),
+      accent: Color(0xFFD35400),
+      amber: Color(0xFFC5A059),
+      soft: Color(0xFFF4EFE6),
+      text: Color(0xFF1E293B),
+      textMuted: Color(0xFF64748B),
+      line: Color(0xFFE2E8F0),
+      surfaceAlt: Color(0xFFF1F5F9),
+      success: Color(0xFF10B981),
+      danger: Color(0xFFEF4444),
+      shadow: Color(0x0C1E293B),
     ),
     Brightness.dark => const QingpuPalette(
-      brand: Color(0xFF7DA2FF),
-      brandDark: Color(0xFFC7D6FF),
-      paper: Color(0xFF0F141B),
-      paperTint: Color(0xFF171D26),
-      accent: Color(0xFFFF8A6F),
-      amber: Color(0xFFF4BE57),
-      soft: Color(0xFF202B3A),
-      text: Color(0xFFEAF0F8),
-      textMuted: Color(0xFF9BA8BA),
-      line: Color(0xFF293241),
-      surfaceAlt: Color(0xFF111821),
-      success: Color(0xFF4FC79A),
-      danger: Color(0xFFFF6B78),
-      shadow: Color(0x66000000),
+      brand: Color(0xFF00E5FF),
+      brandDark: Color(0xFF00ACC1),
+      paper: Color(0xFF0A0E17),
+      paperTint: Color(0xFF151D2A),
+      accent: Color(0xFFFF9500),
+      amber: Color(0xFFFFCC00),
+      soft: Color(0xFF1E293B),
+      text: Color(0xFFE2E8F0),
+      textMuted: Color(0xFF94A3B8),
+      line: Color(0xFF2E3B4E),
+      surfaceAlt: Color(0xFF1F2B3E),
+      success: Color(0xFF05CD99),
+      danger: Color(0xFFEE5D5D),
+      shadow: Color(0x3F000000),
     ),
   };
 }

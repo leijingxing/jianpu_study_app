@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../audio/tone_synth.dart';
@@ -141,22 +142,31 @@ class _HomePageState extends State<HomePage> {
       animation: Listenable.merge([_favorites, _localScores, widget.settings]),
       builder: (context, _) {
         return Scaffold(
-          body: SafeArea(
-            child: Column(
-              children: [
-                _HomeTopBar(
+          extendBody: true,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: _buildBody(),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _HomeTopBar(
                   controller: _searchController,
                   tab: _tab,
                   onSearch: (value) {
-                    if (_tab > 1) return;
-                    _query = value;
-                    _load();
+                    if (_tab == 2) {
+                      setState(() => _query = value);
+                    } else if (_tab < 2) {
+                      _query = value;
+                      _load();
+                    }
                   },
                   onSettings: _openSettings,
                 ),
-                Expanded(child: _buildBody()),
-              ],
-            ),
+              ),
+            ],
           ),
           bottomNavigationBar: _HomeNavigation(
             selectedIndex: _tab,
@@ -215,15 +225,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDynamicList() {
+    final topPadding = MediaQuery.viewPaddingOf(context).top + 116;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
         controller: _scrollController,
         padding: EdgeInsets.fromLTRB(
           16,
-          widget.settings.compactList ? 6 : 10,
+          (widget.settings.compactList ? 6 : 10) + topPadding,
           16,
-          24,
+          96,
         ),
         itemCount: _dynamicSongs.length + 1,
         separatorBuilder: (_, _) => const SizedBox(height: 10),
@@ -270,15 +281,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildImageList() {
+    final topPadding = MediaQuery.viewPaddingOf(context).top + 116;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
         controller: _scrollController,
         padding: EdgeInsets.fromLTRB(
           16,
-          widget.settings.compactList ? 6 : 10,
+          (widget.settings.compactList ? 6 : 10) + topPadding,
           16,
-          24,
+          96,
         ),
         itemCount: _imageScores.length + 1,
         separatorBuilder: (_, _) => const SizedBox(height: 10),
@@ -322,25 +334,61 @@ class _HomePageState extends State<HomePage> {
   Widget _buildFavorites() {
     final items = _favorites.items;
     final localItems = _localScores.items;
+    final topPadding = MediaQuery.viewPaddingOf(context).top + 116;
     if (items.isEmpty && localItems.isEmpty) {
-      return const StateView(
-        icon: AppIcons.bookmarkAddOutlined,
-        title: '还没有收藏',
-        message: '收藏和本地制作的谱子会放在这里',
+      return Padding(
+        padding: EdgeInsets.only(top: topPadding, bottom: 96),
+        child: const StateView(
+          icon: AppIcons.bookmarkAddOutlined,
+          title: '还没有收藏',
+          message: '收藏和本地制作的谱子会放在这里',
+        ),
       );
     }
+
+    final queryLower = _query.trim().toLowerCase();
+    final filteredLocalItems = queryLower.isEmpty
+        ? localItems
+        : localItems.where((item) {
+            final title = item.title.toLowerCase();
+            final singer = item.draft.singer.toLowerCase();
+            final composer = item.draft.composer.toLowerCase();
+            return title.contains(queryLower) ||
+                singer.contains(queryLower) ||
+                composer.contains(queryLower);
+          }).toList();
+
+    final filteredItems = queryLower.isEmpty
+        ? items
+        : items.where((item) {
+            final title = item.title.toLowerCase();
+            final subtitle = item.subtitle.toLowerCase();
+            return title.contains(queryLower) || subtitle.contains(queryLower);
+          }).toList();
+
+    if (queryLower.isNotEmpty && filteredLocalItems.isEmpty && filteredItems.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.only(top: topPadding + 40, bottom: 96),
+        child: const StateView(
+          icon: AppIcons.searchRounded,
+          title: '未找到匹配的收藏',
+          message: '尝试用其他关键字搜索吧',
+        ),
+      );
+    }
+
     return ListView(
       padding: EdgeInsets.fromLTRB(
         16,
-        widget.settings.compactList ? 6 : 10,
+        (widget.settings.compactList ? 6 : 10) + topPadding,
         16,
-        24,
+        96,
       ),
       children: [
-        if (localItems.isNotEmpty) ...[
+        if (filteredLocalItems.isNotEmpty) ...[
           const _SectionHeader(title: '本地制作', subtitle: '点击加载到制作页'),
           const SizedBox(height: 10),
-          for (final item in localItems) ...[
+          for (final item in filteredLocalItems) ...[
             _LocalScoreTile(
               item: item,
               compact: widget.settings.compactList,
@@ -349,12 +397,12 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 10),
           ],
-          if (items.isNotEmpty) const SizedBox(height: 6),
+          if (filteredItems.isNotEmpty) const SizedBox(height: 6),
         ],
-        if (items.isNotEmpty) ...[
+        if (filteredItems.isNotEmpty) ...[
           const _SectionHeader(title: '我的收藏', subtitle: '动态谱和图片谱'),
           const SizedBox(height: 10),
-          for (final item in items) ...[
+          for (final item in filteredItems) ...[
             ScoreCard(
               title: item.title,
               subtitle: item.subtitle.isEmpty
@@ -458,14 +506,18 @@ class _HomeTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    final searchEnabled = tab < 2;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      decoration: BoxDecoration(
-        color: palette.paper,
-        border: Border(bottom: BorderSide(color: palette.line)),
-      ),
-      child: Column(
+    final showSearch = tab < 3;
+    final topPadding = MediaQuery.viewPaddingOf(context).top;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(16, 10 + topPadding, 16, 12),
+          decoration: BoxDecoration(
+            color: palette.paper.withValues(alpha: 0.8),
+            border: Border(bottom: BorderSide(color: palette.line.withValues(alpha: 0.4))),
+          ),
+          child: Column(
         children: [
           Row(
             children: [
@@ -525,42 +577,46 @@ class _HomeTopBar extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (context, value, _) {
-              return SizedBox(
-                height: 44,
-                child: TextField(
-                  controller: controller,
-                  enabled: searchEnabled,
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: onSearch,
-                  decoration: InputDecoration(
-                    hintText: switch (tab) {
-                      0 => '搜索歌名、歌手、编配',
-                      1 => '搜索图片谱标题',
-                      2 => '收藏页不需要搜索',
-                      _ => '工具页不需要搜索',
-                    },
-                    prefixIcon: const Icon(AppIcons.searchRounded, size: 21),
-                    suffixIcon: !searchEnabled || value.text.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: '清除搜索',
-                            onPressed: () {
-                              controller.clear();
-                              onSearch('');
-                            },
-                            icon: const Icon(AppIcons.closeRounded, size: 20),
-                          ),
+          if (showSearch) ...[
+            const SizedBox(height: 12),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller,
+              builder: (context, value, _) {
+                return SizedBox(
+                  height: 44,
+                  child: TextField(
+                    controller: controller,
+                    enabled: true,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: onSearch,
+                    decoration: InputDecoration(
+                      hintText: switch (tab) {
+                        0 => '搜索歌名、歌手、编配',
+                        1 => '搜索图片谱标题',
+                        2 => '搜索收藏和本地简谱',
+                        _ => '',
+                      },
+                      prefixIcon: const Icon(AppIcons.searchRounded, size: 21),
+                      suffixIcon: value.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: '清除搜索',
+                              onPressed: () {
+                                controller.clear();
+                                onSearch('');
+                              },
+                              icon: const Icon(AppIcons.closeRounded, size: 20),
+                            ),
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
+          ],
         ],
       ),
+    ),
+    ),
     );
   }
 }
@@ -574,32 +630,39 @@ class _HomeNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: palette.paperTint,
-        border: Border(top: BorderSide(color: palette.line)),
-      ),
-      child: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onChanged,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(AppIcons.graphicEqRounded),
-            label: '动态谱',
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          decoration: BoxDecoration(
+            color: palette.paperTint.withValues(alpha: 0.8),
+            border: Border(top: BorderSide(color: palette.line.withValues(alpha: 0.4))),
           ),
-          NavigationDestination(
-            icon: Icon(AppIcons.imageOutlined),
-            label: '图片谱',
+          child: NavigationBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onChanged,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(AppIcons.graphicEqRounded),
+                label: '动态谱',
+              ),
+              NavigationDestination(
+                icon: Icon(AppIcons.imageOutlined),
+                label: '图片谱',
+              ),
+              NavigationDestination(
+                icon: Icon(AppIcons.bookmarkBorderRounded),
+                label: '收藏',
+              ),
+              NavigationDestination(
+                icon: Icon(AppIcons.grid4x4Rounded),
+                label: '工具',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(AppIcons.bookmarkBorderRounded),
-            label: '收藏',
-          ),
-          NavigationDestination(
-            icon: Icon(AppIcons.grid4x4Rounded),
-            label: '工具',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -753,57 +816,10 @@ class _ToolHub extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = paletteOf(context);
+    final topPadding = MediaQuery.viewPaddingOf(context).top + 60;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      padding: EdgeInsets.fromLTRB(16, 14 + topPadding, 16, 96),
       children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
-          decoration: BoxDecoration(
-            color: palette.paperTint,
-            border: Border.all(color: palette.line),
-            borderRadius: BorderRadius.circular(radiusMedium),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: palette.soft,
-                  borderRadius: BorderRadius.circular(radiusMedium),
-                ),
-                child: Icon(AppIcons.tuneRounded, color: palette.brand),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '练习工具',
-                      style: TextStyle(
-                        color: palette.text,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '音色、节奏、唱谱训练集中管理',
-                      style: TextStyle(
-                        color: palette.textMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
         _ToolTile(
           icon: AppIcons.addRounded,
           title: '制作简谱',
@@ -964,80 +980,94 @@ class ScoreCard extends StatelessWidget {
           ),
         );
       },
-      child: Card(
-        child: InkWell(
-          onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: palette.paperTint,
           borderRadius: BorderRadius.circular(radiusMedium),
-          child: Padding(
-            padding: EdgeInsets.all(compact ? 10 : 12),
-            child: Row(
-              children: [
-                _CoverThumb(
-                  title: title,
-                  imageUrl: imageUrl,
-                  icon: leadingIcon,
-                  compact: compact,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          color: palette.text,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: palette.textMuted,
-                          fontSize: 13,
-                          height: 1.25,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          InfoPill(label: badge, color: palette.brand),
-                          InfoPill(label: metric, color: palette.amber),
-                        ],
-                      ),
-                    ],
+          border: Border.all(color: palette.line.withValues(alpha: 0.6), width: 1.1),
+          boxShadow: [
+            BoxShadow(
+              color: palette.shadow.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(radiusMedium),
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: EdgeInsets.all(compact ? 10 : 12),
+              child: Row(
+                children: [
+                  _CoverThumb(
+                    title: title,
+                    imageUrl: imageUrl,
+                    icon: leadingIcon,
+                    compact: compact,
                   ),
-                ),
-                IconButton(
-                  tooltip: favorite ? '取消收藏' : '收藏',
-                  onPressed: onFavorite,
-                  icon: AnimatedSwitcher(
-                    duration: reduceMotion
-                        ? Duration.zero
-                        : const Duration(milliseconds: 180),
-                    transitionBuilder: (child, animation) => ScaleTransition(
-                      scale: animation,
-                      child: FadeTransition(opacity: animation, child: child),
-                    ),
-                    child: Icon(
-                      favorite
-                          ? AppIcons.bookmarkRounded
-                          : AppIcons.bookmarkBorderRounded,
-                      key: ValueKey(favorite),
-                      color: favorite ? palette.accent : palette.textMuted,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: palette.text,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: palette.textMuted,
+                            fontSize: 13,
+                            height: 1.25,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            InfoPill(label: badge, color: palette.brand),
+                            InfoPill(label: metric, color: palette.amber),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  IconButton(
+                    tooltip: favorite ? '取消收藏' : '收藏',
+                    onPressed: onFavorite,
+                    icon: AnimatedSwitcher(
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 180),
+                      transitionBuilder: (child, animation) => ScaleTransition(
+                        scale: animation,
+                        child: FadeTransition(opacity: animation, child: child),
+                      ),
+                      child: Icon(
+                        favorite
+                            ? AppIcons.bookmarkRounded
+                            : AppIcons.bookmarkBorderRounded,
+                        key: ValueKey(favorite),
+                        color: favorite ? palette.accent : palette.textMuted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
