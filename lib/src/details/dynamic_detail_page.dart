@@ -834,18 +834,23 @@ class _InstrumentSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
+    return DropdownButtonFormField<int>(
+      initialValue: selectedProgram,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: '演奏音色',
+        prefixIcon: Icon(AppIcons.libraryMusicOutlined),
+      ),
+      items: [
         for (final instrument in melodyInstruments)
-          ChoiceChip(
-            label: Text('${instrument.name} · ${instrument.group}'),
-            selected: instrument.program == selectedProgram,
-            onSelected: (_) => onSelected(instrument.program),
-            visualDensity: VisualDensity.compact,
+          DropdownMenuItem(
+            value: instrument.program,
+            child: Text('${instrument.name} · ${instrument.group}'),
           ),
       ],
+      onChanged: (value) {
+        if (value != null) onSelected(value);
+      },
     );
   }
 }

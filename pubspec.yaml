@@ -71,7 +71,7 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
-    - assets/soundfonts/generaluser-gs-v1.471.sf2
+    - assets/soundfonts/generaluser-gs-v2.0.3.sf2
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

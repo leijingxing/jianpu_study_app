@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_midi_pro/flutter_midi_pro.dart';
 
 class PlatformInstrumentBackend {
-  static const _soundFontAsset = 'assets/soundfonts/generaluser-gs-v1.471.sf2';
+  static const _soundFontAsset = 'assets/soundfonts/generaluser-gs-v2.0.3.sf2';
   static const _channel = 0;
   static const _bank = 0;
   static const _defaultProgram = 73;

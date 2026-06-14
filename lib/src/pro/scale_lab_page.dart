@@ -204,6 +204,7 @@ class _ControlPanel extends StatelessWidget {
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             initialValue: selectedProgram,
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: '音色',
               prefixIcon: Icon(AppIcons.libraryMusicOutlined),
