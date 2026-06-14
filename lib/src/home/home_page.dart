@@ -10,6 +10,7 @@ import '../data/jianpu_api.dart';
 import '../data/models.dart';
 import '../details/dynamic_detail_page.dart';
 import '../details/image_detail_page.dart';
+import '../pro/instrument_analyzer_page.dart';
 import '../pro/jianpu_local_score_store.dart';
 import '../pro/jianpu_maker_page.dart';
 import '../pro/jianpu_practice_page.dart';
@@ -145,9 +146,7 @@ class _HomePageState extends State<HomePage> {
           extendBody: true,
           body: Stack(
             children: [
-              Positioned.fill(
-                child: _buildBody(),
-              ),
+              Positioned.fill(child: _buildBody()),
               Positioned(
                 top: 0,
                 left: 0,
@@ -221,6 +220,8 @@ class _HomePageState extends State<HomePage> {
       onScaleLab: () => Navigator.of(context).pushNamed(ScaleLabPage.routeName),
       onMetronome: () =>
           Navigator.of(context).pushNamed(MetronomePage.routeName),
+      onInstrumentAnalyzer: () =>
+          Navigator.of(context).pushNamed(InstrumentAnalyzerPage.routeName),
     );
   }
 
@@ -366,7 +367,9 @@ class _HomePageState extends State<HomePage> {
             return title.contains(queryLower) || subtitle.contains(queryLower);
           }).toList();
 
-    if (queryLower.isNotEmpty && filteredLocalItems.isEmpty && filteredItems.isEmpty) {
+    if (queryLower.isNotEmpty &&
+        filteredLocalItems.isEmpty &&
+        filteredItems.isEmpty) {
       return Padding(
         padding: EdgeInsets.only(top: topPadding + 40, bottom: 96),
         child: const StateView(
@@ -515,108 +518,116 @@ class _HomeTopBar extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(16, 10 + topPadding, 16, 12),
           decoration: BoxDecoration(
             color: palette.paper.withValues(alpha: 0.8),
-            border: Border(bottom: BorderSide(color: palette.line.withValues(alpha: 0.4))),
+            border: Border(
+              bottom: BorderSide(color: palette.line.withValues(alpha: 0.4)),
+            ),
           ),
           child: Column(
-        children: [
-          Row(
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: palette.brand,
-                  borderRadius: BorderRadius.circular(radiusMedium),
-                ),
-                child: Icon(
-                  AppIcons.musicNoteRounded,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '轻谱',
-                      style: TextStyle(
-                        color: palette.text,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
-                      ),
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: palette.brand,
+                      borderRadius: BorderRadius.circular(radiusMedium),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '专业简谱学习与练习工具',
-                      style: TextStyle(
-                        color: palette.textMuted,
-                        fontSize: 13,
-                        height: 1.2,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Icon(
+                      AppIcons.musicNoteRounded,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 22,
                     ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: '设置',
-                onPressed: onSettings,
-                icon: const Icon(AppIcons.settingsOutlined),
-                style: IconButton.styleFrom(
-                  fixedSize: const Size(40, 40),
-                  foregroundColor: palette.text,
-                  backgroundColor: palette.paperTint,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(radiusMedium),
-                    side: BorderSide(color: palette.line),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '轻谱',
+                          style: TextStyle(
+                            color: palette.text,
+                            fontSize: 23,
+                            fontWeight: FontWeight.w900,
+                            height: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '专业简谱学习与练习工具',
+                          style: TextStyle(
+                            color: palette.textMuted,
+                            fontSize: 13,
+                            height: 1.2,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: '设置',
+                    onPressed: onSettings,
+                    icon: const Icon(AppIcons.settingsOutlined),
+                    style: IconButton.styleFrom(
+                      fixedSize: const Size(40, 40),
+                      foregroundColor: palette.text,
+                      backgroundColor: palette.paperTint,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(radiusMedium),
+                        side: BorderSide(color: palette.line),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              if (showSearch) ...[
+                const SizedBox(height: 12),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: controller,
+                  builder: (context, value, _) {
+                    return SizedBox(
+                      height: 44,
+                      child: TextField(
+                        controller: controller,
+                        enabled: true,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: onSearch,
+                        decoration: InputDecoration(
+                          hintText: switch (tab) {
+                            0 => '搜索歌名、歌手、编配',
+                            1 => '搜索图片谱标题',
+                            2 => '搜索收藏和本地简谱',
+                            _ => '',
+                          },
+                          prefixIcon: const Icon(
+                            AppIcons.searchRounded,
+                            size: 21,
+                          ),
+                          suffixIcon: value.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: '清除搜索',
+                                  onPressed: () {
+                                    controller.clear();
+                                    onSearch('');
+                                  },
+                                  icon: const Icon(
+                                    AppIcons.closeRounded,
+                                    size: 20,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ],
           ),
-          if (showSearch) ...[
-            const SizedBox(height: 12),
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: controller,
-              builder: (context, value, _) {
-                return SizedBox(
-                  height: 44,
-                  child: TextField(
-                    controller: controller,
-                    enabled: true,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: onSearch,
-                    decoration: InputDecoration(
-                      hintText: switch (tab) {
-                        0 => '搜索歌名、歌手、编配',
-                        1 => '搜索图片谱标题',
-                        2 => '搜索收藏和本地简谱',
-                        _ => '',
-                      },
-                      prefixIcon: const Icon(AppIcons.searchRounded, size: 21),
-                      suffixIcon: value.text.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: '清除搜索',
-                              onPressed: () {
-                                controller.clear();
-                                onSearch('');
-                              },
-                              icon: const Icon(AppIcons.closeRounded, size: 20),
-                            ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ],
+        ),
       ),
-    ),
-    ),
     );
   }
 }
@@ -636,7 +647,9 @@ class _HomeNavigation extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: palette.paperTint.withValues(alpha: 0.8),
-            border: Border(top: BorderSide(color: palette.line.withValues(alpha: 0.4))),
+            border: Border(
+              top: BorderSide(color: palette.line.withValues(alpha: 0.4)),
+            ),
           ),
           child: NavigationBar(
             backgroundColor: Colors.transparent,
@@ -806,6 +819,7 @@ class _ToolHub extends StatelessWidget {
     required this.onPractice,
     required this.onScaleLab,
     required this.onMetronome,
+    required this.onInstrumentAnalyzer,
   });
 
   final AppSettings settings;
@@ -813,6 +827,7 @@ class _ToolHub extends StatelessWidget {
   final VoidCallback onPractice;
   final VoidCallback onScaleLab;
   final VoidCallback onMetronome;
+  final VoidCallback onInstrumentAnalyzer;
 
   @override
   Widget build(BuildContext context) {
@@ -839,6 +854,13 @@ class _ToolHub extends StatelessWidget {
           title: '音阶实验室',
           subtitle: '当前音色：${_instrumentName(settings.melodyInstrumentProgram)}',
           onTap: onScaleLab,
+        ),
+        const SizedBox(height: 10),
+        _ToolTile(
+          icon: AppIcons.recordVoiceOverRounded,
+          title: '乐器分析',
+          subtitle: '实时频率、音准、频谱和音色稳定度',
+          onTap: onInstrumentAnalyzer,
         ),
         const SizedBox(height: 10),
         _ToolTile(
@@ -984,7 +1006,10 @@ class ScoreCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: palette.paperTint,
           borderRadius: BorderRadius.circular(radiusMedium),
-          border: Border.all(color: palette.line.withValues(alpha: 0.6), width: 1.1),
+          border: Border.all(
+            color: palette.line.withValues(alpha: 0.6),
+            width: 1.1,
+          ),
           boxShadow: [
             BoxShadow(
               color: palette.shadow.withValues(alpha: 0.05),

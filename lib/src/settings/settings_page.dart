@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/app_settings.dart';
+import '../pro/instrument_analyzer_page.dart';
 import '../pro/jianpu_practice_page.dart';
 import '../pro/metronome_page.dart';
 import '../pro/scale_lab_page.dart';
@@ -95,6 +96,14 @@ class SettingsPage extends StatelessWidget {
                     subtitle: '选择音色，点击低音、中音和高音',
                     onTap: () =>
                         Navigator.of(context).pushNamed(ScaleLabPage.routeName),
+                  ),
+                  _SettingsNavTile(
+                    icon: AppIcons.recordVoiceOverRounded,
+                    title: '乐器分析',
+                    subtitle: '实时分析频率、音准和音色',
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(InstrumentAnalyzerPage.routeName),
                   ),
                   _SettingsNavTile(
                     icon: AppIcons.avTimerRounded,

@@ -31,6 +31,8 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>用于实时分析演奏的频率、音准和音色</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>用于将导出的简谱图片保存到系统相册</string>
 	<key>NSPhotoLibraryUsageDescription</key>
