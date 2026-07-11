@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
-import '../audio/tone_synth.dart';
 
 enum GameState { idle, playing, gameOver }
 

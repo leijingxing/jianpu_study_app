@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jianpu_study_app/src/audio/tone_synth.dart';
 import 'package:jianpu_study_app/src/pro/jianpu_game_engine.dart';
 
 void main() {
