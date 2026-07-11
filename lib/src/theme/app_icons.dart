@@ -75,6 +75,7 @@ class AppIcons {
   static const IconData tuneRounded = PhosphorIconsRegular.slidersHorizontal;
   static const IconData videocamOffOutlined =
       PhosphorIconsRegular.videoCameraSlash;
+  static const IconData videogameAssetRounded = PhosphorIconsRegular.gameController;
   static const IconData visibilityOutlined = PhosphorIconsRegular.eye;
   static const IconData volumeOffRounded = PhosphorIconsRegular.speakerX;
   static const IconData volumeUpRounded = PhosphorIconsRegular.speakerHigh;

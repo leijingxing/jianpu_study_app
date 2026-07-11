@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'data/app_settings.dart';
 import 'home/home_page.dart';
 import 'pro/instrument_analyzer_page.dart';
+import 'pro/jianpu_game_page.dart';
 import 'pro/jianpu_maker_page.dart';
-import 'pro/jianpu_practice_page.dart';
 import 'pro/metronome_page.dart';
 import 'pro/scale_lab_page.dart';
 import 'theme/app_theme.dart';
@@ -46,8 +46,8 @@ class _JianpuStudyAppState extends State<JianpuStudyApp> {
           routes: {
             JianpuMakerPage.routeName: (_) =>
                 JianpuMakerPage(settings: _settings),
-            JianpuPracticePage.routeName: (_) =>
-                JianpuPracticePage(settings: _settings),
+            JianpuGamePage.routeName: (_) =>
+                JianpuGamePage(settings: _settings),
             MetronomePage.routeName: (_) => const MetronomePage(),
             ScaleLabPage.routeName: (_) => ScaleLabPage(settings: _settings),
             InstrumentAnalyzerPage.routeName: (_) =>

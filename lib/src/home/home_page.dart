@@ -12,9 +12,9 @@ import '../details/dynamic_detail_page.dart';
 import '../details/image_detail_page.dart';
 import '../details/yuepu_resource_detail_page.dart';
 import '../pro/instrument_analyzer_page.dart';
+import '../pro/jianpu_game_page.dart';
 import '../pro/jianpu_local_score_store.dart';
 import '../pro/jianpu_maker_page.dart';
-import '../pro/jianpu_practice_page.dart';
 import '../pro/metronome_page.dart';
 import '../pro/scale_lab_page.dart';
 import '../search/comprehensive_search_page.dart';
@@ -221,8 +221,7 @@ class _HomePageState extends State<HomePage> {
         await Navigator.of(context).pushNamed(JianpuMakerPage.routeName);
         await _localScores.load();
       },
-      onPractice: () =>
-          Navigator.of(context).pushNamed(JianpuPracticePage.routeName),
+      onGame: () => Navigator.of(context).pushNamed(JianpuGamePage.routeName),
       onScaleLab: () => Navigator.of(context).pushNamed(ScaleLabPage.routeName),
       onMetronome: () =>
           Navigator.of(context).pushNamed(MetronomePage.routeName),
@@ -935,7 +934,7 @@ class _ToolHub extends StatelessWidget {
   const _ToolHub({
     required this.settings,
     required this.onMaker,
-    required this.onPractice,
+    required this.onGame,
     required this.onScaleLab,
     required this.onMetronome,
     required this.onInstrumentAnalyzer,
@@ -943,7 +942,7 @@ class _ToolHub extends StatelessWidget {
 
   final AppSettings settings;
   final VoidCallback onMaker;
-  final VoidCallback onPractice;
+  final VoidCallback onGame;
   final VoidCallback onScaleLab;
   final VoidCallback onMetronome;
   final VoidCallback onInstrumentAnalyzer;
@@ -962,10 +961,10 @@ class _ToolHub extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         _ToolTile(
-          icon: AppIcons.menuBookRounded,
-          title: '简谱练习',
-          subtitle: '符号教学、唱谱、节奏拆解和乐句循环',
-          onTap: onPractice,
+          icon: AppIcons.videogameAssetRounded,
+          title: '读谱挑战',
+          subtitle: '快节奏练耳与视奏游戏',
+          onTap: onGame,
         ),
         const SizedBox(height: 10),
         _ToolTile(

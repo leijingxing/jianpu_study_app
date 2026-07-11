@@ -11,7 +11,6 @@ import '../data/key_transpose.dart';
 import '../data/favorites_store.dart';
 import '../data/jianpu_api.dart';
 import '../data/models.dart';
-import '../pro/jianpu_practice_page.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/jianpu_score_view.dart';
@@ -231,13 +230,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
                       ),
                     ],
                   ),
-                ),
-                _ToolbarButton(
-                  tooltip: '唱谱练习',
-                  icon: AppIcons.recordVoiceOverRounded,
-                  onPressed: detail == null || _document == null
-                      ? null
-                      : () => _openPractice(detail, _document!),
                 ),
                 _ToolbarButton(
                   tooltip: favorite ? '取消收藏' : '收藏',
@@ -558,20 +550,6 @@ class _DynamicDetailPageState extends State<DynamicDetailPage> {
           },
         );
       },
-    );
-  }
-
-  void _openPractice(MusicDetail detail, ScoreDocument document) {
-    if (_playing) _togglePlay();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => JianpuPracticePage(
-          settings: widget.settings,
-          title: detail.title.isEmpty ? widget.song.title : detail.title,
-          detail: detail,
-          document: document,
-        ),
-      ),
     );
   }
 

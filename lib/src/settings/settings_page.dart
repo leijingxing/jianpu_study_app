@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../data/app_settings.dart';
 import '../pro/instrument_analyzer_page.dart';
-import '../pro/jianpu_practice_page.dart';
 import '../pro/metronome_page.dart';
 import '../pro/scale_lab_page.dart';
 import '../theme/app_icons.dart';
@@ -82,14 +81,6 @@ class SettingsPage extends StatelessWidget {
                 title: '工具',
                 icon: AppIcons.grid4x4Rounded,
                 children: [
-                  _SettingsNavTile(
-                    icon: AppIcons.menuBookRounded,
-                    title: '简谱练习',
-                    subtitle: '符号教学、节奏拆解和乐句循环',
-                    onTap: () => Navigator.of(
-                      context,
-                    ).pushNamed(JianpuPracticePage.routeName),
-                  ),
                   _SettingsNavTile(
                     icon: AppIcons.pianoOutlined,
                     title: '音阶实验室',
