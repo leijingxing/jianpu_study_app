@@ -1,9 +1,5 @@
-import 'package:flutter/material.dart';
+import 'src/app/app_bootstrap.dart';
 
-import 'src/app.dart';
+export 'src/app/app.dart';
 
-export 'src/app.dart';
-
-void main() {
-  runApp(const JianpuStudyApp());
-}
+Future<void> main() => bootstrapApp();

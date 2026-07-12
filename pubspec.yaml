@@ -46,6 +46,8 @@ dependencies:
   flutter_midi_pro: ^3.1.6
   gal: ^2.3.2
   wakelock_plus: ^1.6.1
+  flutter_riverpod: ^3.0.3
+  go_router: ^17.0.1
 
 dev_dependencies:
   flutter_test:

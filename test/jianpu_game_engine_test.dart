@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jianpu_study_app/src/pro/jianpu_game_engine.dart';
+import 'package:jianpu_study_app/src/features/jianpu_game/jianpu_game_engine.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  
+
   group('JianpuGameEngine', () {
     late JianpuGameEngine engine;
 
@@ -28,7 +28,7 @@ void main() {
     test('submitAnswer increases score and combo when correct', () {
       engine.startGame();
       final currentNote = engine.currentNoteRaw;
-      
+
       // Extract base number to simulate correct answer
       final match = RegExp(r'[1-7]').firstMatch(currentNote);
       final answer = match?.group(0) ?? '1';
@@ -38,7 +38,7 @@ void main() {
       expect(engine.combo, 1);
       expect(engine.score, 15); // 10 + 1 * 5
       expect(engine.maxCombo, 1);
-      
+
       // Current note should have changed
       // (Unless random generates same note, but it works in principle)
       engine.stopGame();
@@ -46,7 +46,7 @@ void main() {
 
     test('submitAnswer resets combo when wrong', () {
       engine.startGame();
-      
+
       // Submit a correct answer first
       final match1 = RegExp(r'[1-7]').firstMatch(engine.currentNoteRaw);
       final answer1 = match1?.group(0) ?? '1';

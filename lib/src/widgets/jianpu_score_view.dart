@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../data/key_transpose.dart';
-import '../data/models.dart';
+import '../domain/music/key_transpose.dart';
+import '../domain/models/models.dart';
 import '../theme/app_theme.dart';
 
 class JianpuScoreView extends StatelessWidget {

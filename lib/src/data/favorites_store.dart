@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'models.dart';
+import '../domain/models/models.dart';
+import 'mappers/favorite_mapper.dart';
 
 class FavoritesStore extends ChangeNotifier {
   static const _storageKey = 'favorite_scores_v1';
@@ -24,7 +25,9 @@ class FavoritesStore extends ChangeNotifier {
       ..addEntries(
         decoded
             .whereType<Map>()
-            .map((item) => FavoriteItem.fromJson(item.cast<String, dynamic>()))
+            .map(
+              (item) => FavoriteMapper.fromJson(item.cast<String, dynamic>()),
+            )
             .map((item) => MapEntry(item.key, item)),
       );
     notifyListeners();
@@ -40,7 +43,7 @@ class FavoritesStore extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _storageKey,
-      jsonEncode(_items.values.map((item) => item.toJson()).toList()),
+      jsonEncode(_items.values.map(FavoriteMapper.toJson).toList()),
     );
   }
 }

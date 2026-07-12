@@ -1,14 +1,25 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 
-import 'models.dart';
+import '../core/network/network_client.dart';
+import '../domain/models/score.dart';
+import 'mappers/score_mapper.dart';
 
 class JianpuApi {
-  JianpuApi({http.Client? client}) : _client = client ?? http.Client();
+  JianpuApi({NetworkClient? networkClient})
+    : _networkClient = networkClient ?? NetworkClient();
 
-  final http.Client _client;
+  final NetworkClient _networkClient;
+  var _disposed = false;
+
+  /// Releases the owned HTTP client.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _networkClient.close();
+  }
+
   static const musicBase = 'http://guji666.com';
   static const forumBase = 'http://www.jita666.com';
   static const yuepuBase = 'http://xp.yuepuvip.com:8100/one';
@@ -28,7 +39,7 @@ class JianpuApi {
     final list = (json['data']?['data'] as List? ?? const []);
     return list
         .whereType<Map>()
-        .map((item) => MusicSummary.fromJson(item.cast<String, dynamic>()))
+        .map((item) => ScoreMapper.gujiSummary(item.cast<String, dynamic>()))
         .toList();
   }
 
@@ -64,7 +75,7 @@ class JianpuApi {
     final list = (json['rows'] as List? ?? const []);
     return list
         .whereType<Map>()
-        .map((item) => MusicSummary.fromYuepuJson(item.cast<String, dynamic>()))
+        .map((item) => ScoreMapper.yuepuSummary(item.cast<String, dynamic>()))
         .where((item) => item.externalId.isNotEmpty && item.title.isNotEmpty)
         .toList();
   }
@@ -74,17 +85,14 @@ class JianpuApi {
       '$musicBase/home/music/detail',
     ).replace(queryParameters: {'id': '$id'});
     final json = await _getJson(uri);
-    return MusicDetail.fromJson(
+    return ScoreMapper.gujiDetail(
       (json['data'] as Map? ?? const {}).cast<String, dynamic>(),
     );
   }
 
   Future<String> fetchScoreText(String path) async {
     final normalized = path.startsWith('http') ? path : '$musicBase$path';
-    final response = await _client.get(Uri.parse(normalized));
-    if (response.statusCode != 200) {
-      throw Exception('谱面加载失败: ${response.statusCode}');
-    }
+    final response = await _networkClient.get(Uri.parse(normalized));
     return utf8.decode(response.bodyBytes);
   }
 
@@ -106,7 +114,7 @@ class JianpuApi {
     final list = (json['lists'] as List? ?? const []);
     final items = list
         .whereType<Map>()
-        .map((item) => ImageScoreItem.fromJson(item.cast<String, dynamic>()))
+        .map((item) => ScoreMapper.forumImage(item.cast<String, dynamic>()))
         .toList();
     _logImageList(page: page, orderBy: orderBy, items: items);
     return items;
@@ -143,9 +151,7 @@ class JianpuApi {
     final list = (json['rows'] as List? ?? const []);
     return list
         .whereType<Map>()
-        .map(
-          (item) => ImageScoreItem.fromYuepuJson(item.cast<String, dynamic>()),
-        )
+        .map((item) => ScoreMapper.yuepuImage(item.cast<String, dynamic>()))
         .where((item) => item.id != 'yuepu-mus:' && item.title.isNotEmpty)
         .toList();
   }
@@ -171,7 +177,7 @@ class JianpuApi {
         .whereType<Map>()
         .map(
           (item) =>
-              AccompanimentItem.fromYuepuJson(item.cast<String, dynamic>()),
+              ScoreMapper.yuepuAccompaniment(item.cast<String, dynamic>()),
         )
         .where((item) => item.id.isNotEmpty && item.title.isNotEmpty)
         .toList();
@@ -187,10 +193,7 @@ class JianpuApi {
       );
     }
     final uri = Uri.parse('$forumBase/article-${item.id}-1.html');
-    final response = await _client.get(uri);
-    if (response.statusCode != 200) {
-      throw Exception('图片谱页面加载失败: ${response.statusCode}');
-    }
+    final response = await _networkClient.get(uri);
     final html = utf8.decode(response.bodyBytes);
     final content = _articleContent(html);
     final source = content.isEmpty ? html : content;
@@ -211,8 +214,7 @@ class JianpuApi {
     Uri uri, {
     Map<String, String>? headers,
   }) async {
-    final response = await _client.get(uri, headers: headers);
-    return _decodeJsonResponse(response);
+    return _networkClient.getJson(uri, headers: headers);
   }
 
   Future<List<T>> mergeLists<T>(
@@ -230,15 +232,6 @@ class JianpuApi {
     }
     if (result.isEmpty && firstError != null) throw firstError;
     return result;
-  }
-
-  Map<String, dynamic> _decodeJsonResponse(http.Response response) {
-    if (response.statusCode != 200) {
-      final requestUrl = response.request?.url.toString() ?? 'unknown';
-      throw Exception('接口请求失败: ${response.statusCode} $requestUrl');
-    }
-    final text = utf8.decode(response.bodyBytes);
-    return (jsonDecode(text) as Map).cast<String, dynamic>();
   }
 
   String _articleContent(String html) {
@@ -262,7 +255,7 @@ class JianpuApi {
 
     for (final match in matches) {
       final src = match.group(1) ?? '';
-      final url = normalizeForumUrl(_decodeHtmlAttribute(src));
+      final url = _normalizeForumUrl(_decodeHtmlAttribute(src));
       if (_looksLikeImageUrl(url) && seen.add(url)) {
         urls.add(url);
       }
@@ -289,7 +282,7 @@ class JianpuApi {
     for (final match in matches) {
       final src = match.group(1) ?? '';
       final tag = match.group(0)?.toLowerCase() ?? '';
-      final url = normalizeForumUrl(_decodeHtmlAttribute(src));
+      final url = _normalizeForumUrl(_decodeHtmlAttribute(src));
       final lower = url.toLowerCase();
       final looksLikeVideo =
           tag.contains('video/') ||
@@ -309,6 +302,22 @@ class JianpuApi {
         .replaceAll('&#39;', "'")
         .replaceAll('&lt;', '<')
         .replaceAll('&gt;', '>');
+  }
+
+  String _normalizeForumUrl(String path) {
+    final text = textValue(path);
+    if (text.isEmpty ||
+        text.startsWith('http://') ||
+        text.startsWith('https://')) {
+      return text;
+    }
+    if (text.startsWith('//')) return 'http:$text';
+    if (text.startsWith('data/')) return '$forumBase/$text';
+    if (text.startsWith('/')) return '$forumBase$text';
+    if (text.startsWith('portal/')) {
+      return '$forumBase/data/attachment/$text';
+    }
+    return '$forumBase/$text';
   }
 
   void _logImageList({

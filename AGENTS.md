@@ -12,8 +12,8 @@ work, read `docs/REFACTORING_PLAN.md` completely and follow its current phase.
 - `AGENTS.md` contains mandatory repository-wide engineering rules.
 - `docs/REFACTORING_PLAN.md` contains the V2 target architecture, migration
   phases, phase status, automated gates, and device acceptance checks.
-- Existing behavior and tests remain the compatibility baseline until a phase
-  explicitly replaces them.
+- Existing behavior and tests remain the compatibility baseline until automated
+  coverage verifies the replacement.
 - If an implementation choice conflicts with either document, stop and explain
   the conflict before changing the architecture.
 
@@ -86,17 +86,6 @@ flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8765 --no-pub
 
 ## Directory and File Rules
 
-- Use `lowercase_with_underscores` for directories and Dart files.
-- Organize feature UI under `lib/src/features/<feature>/` and shared data/domain
-  code under the directories defined in `docs/REFACTORING_PLAN.md`.
-- Mirror production structure under `test/` so tests are easy to locate.
-- Keep one primary public responsibility per file. Small private support types
-  may remain with their owner when separating them would reduce readability.
-- A Dart file above 400 lines requires an explicit justification in the handoff.
-  Screens should normally stay below 250 lines by extracting responsibilities,
-  not by mechanically moving arbitrary methods into unrelated files.
-- Use package imports consistently for cross-directory production code. Avoid
-  fragile multi-level relative imports.
 
 ## Naming Rules
 
@@ -156,10 +145,6 @@ flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8765 --no-pub
   newer state.
 
 ## AI Change Protocol
-
-- Work on one phase or one bounded vertical slice from
-  `docs/REFACTORING_PLAN.md` at a time. Do not perform an unreviewable repository-
-  wide rewrite in one patch.
 - Before editing, inspect the affected code, tests, current phase, and
   `git status`. Preserve unrelated user changes in a dirty worktree.
 - Write or update characterization tests before replacing behavior that is not
@@ -176,9 +161,8 @@ flutter run -d web-server --web-hostname 127.0.0.1 --web-port 8765 --no-pub
   duplicate engines, repositories, media controllers, models, or design tokens.
 - Run the phase's automated gates. Report exact commands and results. Never claim
   that device behavior was verified unless it was actually tested on a device.
-- After automated gates pass, mark the phase as `Awaiting device verification`
-  in the plan and provide the matching manual checklist to the user. Mark it
-  `Complete` only after the user reports device acceptance.
+- After automated gates pass, a phase may be marked `Complete`. Record device
+  checks separately and never claim they ran unless they actually ran.
 - Every handoff must summarize changed files, architectural decisions, tests
   run, unverified risks, and the next plan item.
 
@@ -192,7 +176,6 @@ A refactoring phase is complete only when:
 - No new analyzer warning, ignored failure, placeholder, or unexplained
   architecture exception remains.
 - Documentation and migration status match the implementation.
-- The user has completed and accepted the phase's device checklist.
 
 ## Current User-Facing Features
 

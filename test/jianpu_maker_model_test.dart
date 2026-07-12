@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jianpu_study_app/src/pro/jianpu_maker_model.dart';
+import 'package:jianpu_study_app/src/domain/models/local_score.dart';
 
 void main() {
   test('starter draft starts with an empty editable score', () {

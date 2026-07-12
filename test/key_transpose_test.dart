@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jianpu_study_app/src/data/key_transpose.dart';
+import 'package:jianpu_study_app/src/domain/music/key_transpose.dart';
 
 void main() {
   test('rewrites jianpu token when displaying in another key', () {

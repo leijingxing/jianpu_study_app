@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 
 import 'instrument_backend.dart';
-import '../data/key_transpose.dart';
-import '../data/models.dart';
+import '../domain/music/key_transpose.dart';
+import '../domain/models/score_document.dart';
 
 class ToneSynth {
   ToneSynth() {
@@ -66,6 +66,13 @@ class ToneSynth {
         ),
       ),
     );
+  }
+
+  /// Stops all currently sounding melody notes without disposing the synth.
+  Future<void> stopNotes() async {
+    for (final player in _notePlayers) {
+      await player.stop();
+    }
   }
 
   Future<void> dispose() async {

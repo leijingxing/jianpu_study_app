@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jianpu_study_app/src/data/models.dart';
+import 'package:jianpu_study_app/src/domain/models/score_document.dart';
 
 void main() {
   test('parses lyrics from the line after the lyrics marker', () {

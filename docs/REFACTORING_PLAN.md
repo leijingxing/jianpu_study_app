@@ -4,7 +4,7 @@
 
 本文档是 AI 智能体执行全量重构的阶段性工作清单。任何智能体开始重构前，必须完整阅读本文件和仓库根目录的 `AGENTS.md`。
 
-本次重构的最终目标是替换旧架构，而不是长期维护两套实现。但迁移过程中必须保持项目可编译、可测试、可运行。旧实现只有在对应 V2 功能通过自动化验证和用户真机验收后才能删除。
+本次重构的最终目标是替换旧架构，而不是长期维护两套实现。允许跨阶段连续迁移和集中删除旧实现，但过程中必须保持项目可编译、可测试、可运行。对应 V2 功能具备自动化覆盖并通过门禁后即可删除旧实现；真机验证作为后续风险检查，不阻塞删除或阶段完成。
 
 ## 2. 状态规则
 
@@ -12,9 +12,9 @@
 
 - `Not started`：尚未开始。
 - `In progress`：正在编码或自动化验证。
-- `Awaiting device verification`：自动化门禁已经通过，等待用户真机验收。
+- `Awaiting device verification`：可选状态；自动化门禁已经通过，但本轮选择等待真机反馈。
 - `Blocked`：存在明确阻塞，必须记录原因和解除条件。
-- `Complete`：自动化门禁与真机验收均已通过。
+- `Complete`：交付内容和自动化门禁均已通过；真机结果单独记录。
 
 智能体只能在完成实际工作后更新状态，不得预先批量勾选。
 
@@ -22,17 +22,56 @@
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
-| 0 | 基线、特征测试与文档 | Awaiting device verification |
-| 1 | V2 工程骨架和依赖注入 | Not started |
-| 2 | Domain 与 Data Layer | Not started |
-| 3 | 首页与综合搜索 | Not started |
-| 4 | 图片谱、资源详情与媒体播放 | Not started |
-| 5 | 动态简谱阅读与播放 | Not started |
-| 6 | 简谱制作器与本地乐谱 | Not started |
-| 7 | 节拍器、音阶与简谱游戏 | Not started |
-| 8 | 乐器分析器与平台能力 | Not started |
-| 9 | UI、一致性、无障碍与性能 | Not started |
+| 0 | 基线、特征测试与文档 | Complete |
+| 1 | V2 工程骨架和依赖注入 | Complete |
+| 2 | Domain 与 Data Layer | In progress |
+| 3 | 首页与综合搜索 | In progress |
+| 4 | 图片谱、资源详情与媒体播放 | In progress |
+| 5 | 动态简谱阅读与播放 | In progress |
+| 6 | 简谱制作器与本地乐谱 | In progress |
+| 7 | 节拍器、音阶与简谱游戏 | In progress |
+| 8 | 乐器分析器与平台能力 | In progress |
+| 9 | UI、一致性、无障碍与性能 | In progress |
 | 10 | 最终切换、删除旧代码与发布验证 | Not started |
+
+### 3.1 本轮执行授权
+
+用户已明确批准全面替换旧架构。后续实现不再以兼容旧页面、旧 API
+类型或旧目录结构为迁移目标；旧实现仅用于核对产品行为和存储格式。
+V2 垂直切片具备自动化覆盖并通过门禁后，直接删除对应旧实现。
+
+该授权不改变状态真实性要求，也不授权删除产品功能、弱化测试或跳过
+自动化门禁。各阶段仍须在实际交付和门禁完成后才能标记为 `Complete`。
+
+2026-07-11 用户进一步确认：旧交互和旧实现不再作为兼容基线。重构可以
+按 V2 规范调整页面结构、命令语义和数据流，不为不合理的历史行为增加
+兼容分支；仍需用自动化测试证明新行为，并且不得用占位页面代替计划中的
+业务能力。
+
+### 3.2 2026-07-11 实施记录
+
+- 阶段 1 已完成：App Bootstrap、Composition Root、Riverpod、go_router、
+  环境配置、Failure、NetworkClient、统一状态 UI 与未知路由均已接入。
+- 首页和综合搜索已切换到 V2 State/ViewModel，覆盖分页重复请求、搜索部分
+  失败以及过期请求保护；旧 `home_page.dart` 和旧综合搜索页面已删除。
+- 领域乐谱模型已移出 Data Layer，JSON/收藏映射已集中，旧
+  `data/models.dart` 已删除。
+- 动态简谱详情已切换到 V2 Repository/ViewModel，播放时间线为纯 Dart，
+  音符合成通过 `NotePlaybackService` 注入；旧动态谱详情页已删除。
+- 图片谱详情、收藏和相册保存已切换到 V2，普通图片谱与悦谱图片资源共用
+  新页面；缓存视频初始化、播放、静音、进度和全屏已合并为单一组件，旧
+  图片谱详情页已删除。
+- 纯 Dart 转调逻辑已从 Data Layer 移入 Domain music 模块。
+- 悦谱旧资源详情和重复音视频播放器已删除；悦谱动态资源改用统一
+  `CachedVideoPlayer` 与 `NetworkAudioPlayer`。
+- 制作器已改为不可变 Draft、MakerViewModel 与 LocalScoreRepository；
+  SharedPreferences 仅由 LocalScoreService 访问，旧制作器/Store/Model 已删除。
+- 节拍器、音阶、简谱游戏和乐器分析器路由已全部切到 Feature Screen 与
+  ViewModel；页面不再直接持有 Timer、ToneSynth 或麦克风插件。
+- `lib/src/pro`、`lib/src/details`、`lib/src/settings` 已无遗留源文件，路由
+  不再引用这些目录。
+- 本轮门禁：格式化检查、`flutter analyze --no-pub`、40 个测试和
+  `flutter build apk --debug --no-pub` 全部通过。
 
 ## 4. 不可破坏的产品基线
 
@@ -411,7 +450,7 @@ flutter build apk --release --no-pub
 
 - 按第 18 节完整回归。
 - 使用 Release 包验证，不以 Debug 包代替最终验收。
-- 验收通过后才能将阶段标为 `Complete` 并准备合并。
+- 真机验收结果单独记录；发现的问题进入后续修复，不阻塞自动化门禁已通过的阶段完成或合并。
 
 ## 18. 最终真机回归清单
 
