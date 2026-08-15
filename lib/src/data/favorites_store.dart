@@ -34,16 +34,21 @@ class FavoritesStore extends ChangeNotifier {
   }
 
   Future<void> toggle(FavoriteItem item) async {
-    if (_items.containsKey(item.key)) {
-      _items.remove(item.key);
+    final nextItems = Map<String, FavoriteItem>.of(_items);
+    if (nextItems.containsKey(item.key)) {
+      nextItems.remove(item.key);
     } else {
-      _items[item.key] = item;
+      nextItems[item.key] = item;
     }
-    notifyListeners();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    final saved = await prefs.setString(
       _storageKey,
-      jsonEncode(_items.values.map(FavoriteMapper.toJson).toList()),
+      jsonEncode(nextItems.values.map(FavoriteMapper.toJson).toList()),
     );
+    if (!saved) throw StateError('SharedPreferences rejected favorites write.');
+    _items
+      ..clear()
+      ..addAll(nextItems);
+    notifyListeners();
   }
 }

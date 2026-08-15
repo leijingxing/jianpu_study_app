@@ -102,6 +102,24 @@ final class _FavoritesRepository implements FavoritesRepository {
 
   @override
   Future<List<FavoriteItem>> toggle(FavoriteItem item) async => [item];
+
+  @override
+  Future<List<FavoriteItem>> toggleDynamicScore(MusicSummary score) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<FavoriteItem>> toggleImageScore(ImageScoreItem score) => toggle(
+    FavoriteItem(
+      kind: ScoreKind.image,
+      id: score.id,
+      title: score.title,
+      subtitle: score.displaySubtitle,
+      imageUrl: score.imageUrl,
+    ),
+  );
+
+  @override
+  FavoriteTarget resolve(FavoriteItem item) => throw UnimplementedError();
 }
 
 final class _GalleryService implements GalleryService {

@@ -73,4 +73,15 @@ final class _EmptyFavoritesRepository implements FavoritesRepository {
 
   @override
   Future<List<FavoriteItem>> toggle(FavoriteItem item) async => const [];
+
+  @override
+  Future<List<FavoriteItem>> toggleDynamicScore(MusicSummary score) async =>
+      const [];
+
+  @override
+  Future<List<FavoriteItem>> toggleImageScore(ImageScoreItem score) async =>
+      const [];
+
+  @override
+  FavoriteTarget resolve(FavoriteItem item) => throw UnimplementedError();
 }

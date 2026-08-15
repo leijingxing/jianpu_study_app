@@ -31,6 +31,33 @@ void main() {
     expect(find.text('收藏'), findsOneWidget);
     expect(find.text('工具'), findsOneWidget);
   });
+
+  testWidgets('favorite list shows and removes a saved score', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final favorites = _MutableFavoritesRepository();
+    final dependencies = AppDependencies(
+      scoreRepository: _EmptyScoreRepository(),
+      favoritesRepository: favorites,
+    );
+    await dependencies.initialize();
+    addTearDown(dependencies.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDependenciesProvider.overrideWithValue(dependencies)],
+        child: const JianpuStudyApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('收藏'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('收藏测试谱'), findsOneWidget);
+    await tester.tap(find.byTooltip('取消收藏'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('还没有收藏'), findsOneWidget);
+  });
 }
 
 final class _EmptyScoreRepository implements ScoreRepository {
@@ -68,4 +95,59 @@ final class _EmptyFavoritesRepository implements FavoritesRepository {
 
   @override
   Future<List<FavoriteItem>> toggle(FavoriteItem item) async => const [];
+
+  @override
+  Future<List<FavoriteItem>> toggleDynamicScore(MusicSummary score) async =>
+      const [];
+
+  @override
+  Future<List<FavoriteItem>> toggleImageScore(ImageScoreItem score) async =>
+      const [];
+
+  @override
+  FavoriteTarget resolve(FavoriteItem item) => throw UnimplementedError();
+}
+
+final class _MutableFavoritesRepository implements FavoritesRepository {
+  final _items = <FavoriteItem>[
+    const FavoriteItem(
+      kind: ScoreKind.dynamic,
+      id: '7',
+      title: '收藏测试谱',
+      subtitle: '测试歌手',
+    ),
+  ];
+
+  @override
+  bool contains(ScoreKind kind, String id) =>
+      _items.any((item) => item.kind == kind && item.id == id);
+
+  @override
+  List<FavoriteItem> getAll() => List.unmodifiable(_items);
+
+  @override
+  FavoriteTarget resolve(FavoriteItem item) => DynamicFavoriteTarget(
+    MusicSummary(
+      id: int.parse(item.id),
+      title: item.title,
+      singer: item.subtitle,
+      arranger: '',
+      times: 0,
+      level: 0,
+    ),
+  );
+
+  @override
+  Future<List<FavoriteItem>> toggle(FavoriteItem item) async {
+    _items.removeWhere((value) => value.key == item.key);
+    return getAll();
+  }
+
+  @override
+  Future<List<FavoriteItem>> toggleDynamicScore(MusicSummary score) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<FavoriteItem>> toggleImageScore(ImageScoreItem score) =>
+      throw UnimplementedError();
 }

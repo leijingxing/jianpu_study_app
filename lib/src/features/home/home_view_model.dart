@@ -143,24 +143,30 @@ final class HomeViewModel extends Notifier<HomeState> {
     }
   }
 
-  Future<void> toggleDynamicScore(MusicSummary score) => toggleFavorite(
-    FavoriteItem(
-      kind: ScoreKind.dynamic,
-      id: score.favoriteId,
-      title: score.title,
-      subtitle: score.subtitle,
-    ),
-  );
+  Future<void> toggleDynamicScore(MusicSummary score) async {
+    try {
+      final favorites = await _favoritesRepository.toggleDynamicScore(score);
+      state = state.copyWith(favorites: favorites, clearError: true);
+    } catch (error) {
+      state = state.copyWith(errorMessage: _messageOf(error));
+    }
+  }
 
-  Future<void> toggleImageScore(ImageScoreItem score) => toggleFavorite(
-    FavoriteItem(
-      kind: ScoreKind.image,
-      id: score.id,
-      title: score.title,
-      subtitle: score.displaySubtitle,
-      imageUrl: score.imageUrl,
-    ),
-  );
+  Future<void> toggleImageScore(ImageScoreItem score) async {
+    try {
+      final favorites = await _favoritesRepository.toggleImageScore(score);
+      state = state.copyWith(favorites: favorites, clearError: true);
+    } catch (error) {
+      state = state.copyWith(errorMessage: _messageOf(error));
+    }
+  }
+
+  FavoriteTarget resolveFavorite(FavoriteItem item) =>
+      _favoritesRepository.resolve(item);
+
+  void refreshFavorites() {
+    state = state.copyWith(favorites: _favoritesRepository.getAll());
+  }
 
   String _messageOf(Object error) => switch (error) {
     Failure failure => failure.message,

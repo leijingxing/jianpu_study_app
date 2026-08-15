@@ -3,6 +3,7 @@ import '../../domain/models/favorite.dart';
 import '../../domain/models/score.dart';
 import '../../domain/repositories/favorites_repository.dart';
 import '../favorites_store.dart';
+import '../mappers/favorite_mapper.dart';
 
 /// 使用本地收藏服务实现应用层收藏契约。
 final class FavoritesRepositoryImpl implements FavoritesRepository {
@@ -25,4 +26,23 @@ final class FavoritesRepositoryImpl implements FavoritesRepository {
       throw StorageFailure('收藏保存失败。', cause: error);
     }
   }
+
+  @override
+  Future<List<FavoriteItem>> toggleDynamicScore(MusicSummary score) =>
+      toggle(score.toFavoriteItem());
+
+  @override
+  Future<List<FavoriteItem>> toggleImageScore(ImageScoreItem score) =>
+      toggle(score.toFavoriteItem());
+
+  @override
+  FavoriteTarget resolve(FavoriteItem item) => switch (item.kind) {
+    ScoreKind.dynamic => DynamicFavoriteTarget(
+      FavoriteMapper.toMusicSummary(item),
+    ),
+    ScoreKind.image => ImageFavoriteTarget(FavoriteMapper.toImageScore(item)),
+    ScoreKind.accompaniment => AccompanimentFavoriteTarget(
+      FavoriteMapper.toAccompaniment(item),
+    ),
+  };
 }

@@ -27,13 +27,10 @@ final class YuepuResourceViewModel extends Notifier<bool> {
   }
 
   Future<void> toggleFavorite() async {
-    final item = FavoriteItem(
-      kind: ScoreKind.dynamic,
-      id: _score.favoriteId,
-      title: _score.title,
-      subtitle: _score.subtitle,
+    final values = await _favorites.toggleDynamicScore(_score);
+    state = values.any(
+      (value) =>
+          value.kind == ScoreKind.dynamic && value.id == _score.favoriteId,
     );
-    final values = await _favorites.toggle(item);
-    state = values.any((value) => value.key == item.key);
   }
 }

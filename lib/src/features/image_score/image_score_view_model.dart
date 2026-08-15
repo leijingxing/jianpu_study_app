@@ -60,17 +60,12 @@ final class ImageScoreViewModel extends Notifier<ImageScoreState> {
   }
 
   Future<void> toggleFavorite() async {
-    final favorite = FavoriteItem(
-      kind: ScoreKind.image,
-      id: state.item.id,
-      title: state.item.title,
-      subtitle: state.item.displaySubtitle,
-      imageUrl: state.item.imageUrl,
-    );
     try {
-      final items = await _favorites.toggle(favorite);
+      final items = await _favorites.toggleImageScore(state.item);
       state = state.copyWith(
-        isFavorite: items.any((item) => item.key == favorite.key),
+        isFavorite: items.any(
+          (item) => item.kind == ScoreKind.image && item.id == state.item.id,
+        ),
         clearError: true,
       );
     } catch (error) {

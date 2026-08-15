@@ -20,3 +20,26 @@ final class FavoriteItem {
 
   String get key => '${kind.name}:$id';
 }
+
+/// 从收藏快照恢复出的可导航资源。
+sealed class FavoriteTarget {
+  const FavoriteTarget();
+}
+
+final class DynamicFavoriteTarget extends FavoriteTarget {
+  const DynamicFavoriteTarget(this.score);
+
+  final MusicSummary score;
+}
+
+final class ImageFavoriteTarget extends FavoriteTarget {
+  const ImageFavoriteTarget(this.score);
+
+  final ImageScoreItem score;
+}
+
+final class AccompanimentFavoriteTarget extends FavoriteTarget {
+  const AccompanimentFavoriteTarget(this.accompaniment);
+
+  final AccompanimentItem accompaniment;
+}

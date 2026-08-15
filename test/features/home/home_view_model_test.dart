@@ -140,4 +140,31 @@ final class _FakeFavoritesRepository implements FavoritesRepository {
     index < 0 ? _items.add(item) : _items.removeAt(index);
     return getAll();
   }
+
+  @override
+  Future<List<FavoriteItem>> toggleDynamicScore(MusicSummary score) => toggle(
+    FavoriteItem(
+      kind: ScoreKind.dynamic,
+      id: score.favoriteId,
+      title: score.title,
+      subtitle: score.subtitle,
+    ),
+  );
+
+  @override
+  Future<List<FavoriteItem>> toggleImageScore(ImageScoreItem score) => toggle(
+    FavoriteItem(
+      kind: ScoreKind.image,
+      id: score.id,
+      title: score.title,
+      subtitle: score.displaySubtitle,
+      imageUrl: score.imageUrl,
+    ),
+  );
+
+  @override
+  FavoriteTarget resolve(FavoriteItem item) => switch (item.kind) {
+    ScoreKind.dynamic => DynamicFavoriteTarget(_music(int.parse(item.id))),
+    _ => throw UnimplementedError(),
+  };
 }

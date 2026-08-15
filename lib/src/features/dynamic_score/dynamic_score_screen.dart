@@ -146,12 +146,15 @@ final class _DynamicScoreScreenState extends ConsumerState<DynamicScoreScreen> {
     );
   }
 
-  Future<void> _showSettings(BuildContext context) =>
-      showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (context) => Consumer(
+  Future<void> _showSettings(BuildContext context) {
+    final container = ProviderScope.containerOf(context);
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => UncontrolledProviderScope(
+        container: container,
+        child: Consumer(
           builder: (context, ref, child) {
             final state = ref.watch(dynamicScoreViewModelProvider);
             final viewModel = ref.read(dynamicScoreViewModelProvider.notifier);
@@ -217,7 +220,9 @@ final class _DynamicScoreScreenState extends ConsumerState<DynamicScoreScreen> {
             );
           },
         ),
-      );
+      ),
+    );
+  }
 }
 
 final class _DynamicScoreBody extends StatelessWidget {

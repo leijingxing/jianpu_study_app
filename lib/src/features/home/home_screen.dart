@@ -169,7 +169,12 @@ final class _DynamicScoreList extends ConsumerWidget {
                 .toggleDynamicScore(score),
             icon: Icon(favorite ? Icons.bookmark : Icons.bookmark_outline),
           ),
-          onTap: () => context.push(AppRoutes.dynamicScore, extra: score),
+          onTap: () async {
+            await context.push(AppRoutes.dynamicScore, extra: score);
+            if (context.mounted) {
+              ref.read(homeViewModelProvider.notifier).refreshFavorites();
+            }
+          },
         );
       },
     );
@@ -212,7 +217,12 @@ final class _ImageScoreList extends ConsumerWidget {
                 .toggleImageScore(score),
             icon: Icon(favorite ? Icons.bookmark : Icons.bookmark_outline),
           ),
-          onTap: () => context.push(AppRoutes.imageScore, extra: score),
+          onTap: () async {
+            await context.push(AppRoutes.imageScore, extra: score);
+            if (context.mounted) {
+              ref.read(homeViewModelProvider.notifier).refreshFavorites();
+            }
+          },
         );
       },
     );
@@ -273,13 +283,13 @@ final class _PagedListState extends State<_PagedList> {
   );
 }
 
-final class _FavoriteList extends StatelessWidget {
+final class _FavoriteList extends ConsumerWidget {
   const _FavoriteList({required this.items});
 
   final List<FavoriteItem> items;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (items.isEmpty) return const _EmptyList(label: '还没有收藏');
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -295,6 +305,27 @@ final class _FavoriteList extends StatelessWidget {
           }),
           title: Text(item.title),
           subtitle: Text(item.subtitle),
+          trailing: IconButton(
+            tooltip: '取消收藏',
+            onPressed: () =>
+                ref.read(homeViewModelProvider.notifier).toggleFavorite(item),
+            icon: const Icon(Icons.bookmark_remove_outlined),
+          ),
+          onTap: item.kind == ScoreKind.accompaniment
+              ? null
+              : () async {
+                  final viewModel = ref.read(homeViewModelProvider.notifier);
+                  final target = viewModel.resolveFavorite(item);
+                  switch (target) {
+                    case DynamicFavoriteTarget(:final score):
+                      await context.push(AppRoutes.dynamicScore, extra: score);
+                    case ImageFavoriteTarget(:final score):
+                      await context.push(AppRoutes.imageScore, extra: score);
+                    case AccompanimentFavoriteTarget():
+                      return;
+                  }
+                  if (context.mounted) viewModel.refreshFavorites();
+                },
         );
       },
     );
